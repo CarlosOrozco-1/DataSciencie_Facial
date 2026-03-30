@@ -1,0 +1,134 @@
+{
+  "info": {
+    "name": "Facial Recognition API",
+    "description": "API para sistema de reconocimiento facial",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/health"
+          }
+        },
+        {
+          "name": "Root",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cameras",
+      "item": [
+        {
+          "name": "List All Cameras",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/cameras/"
+          }
+        },
+        {
+          "name": "Get Camera by ID",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/cameras/1"
+          }
+        },
+        {
+          "name": "Create Camera",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/cameras/",
+            "body": {
+              "mode": "json",
+              "raw": "{\n  \"name\": \"Camera Test\",\n  \"url\": \"rtsp://test.local/stream\",\n  \"location\": \"Test Location\",\n  \"status\": \"active\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Camera",
+          "request": {
+            "method": "PUT",
+            "url": "{{base_url}}/api/cameras/1",
+            "body": {
+              "mode": "json",
+              "raw": "{\n  \"name\": \"Camera Updated\",\n  \"status\": \"inactive\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Camera",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/cameras/1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Detections",
+      "item": [
+        {
+          "name": "List All Detections",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/detections/"
+          }
+        },
+        {
+          "name": "List Detections with Filters",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/detections/?camera_id=1&gender=male",
+              "host": ["{{base_url}}"],
+              "path": ["api", "detections", ""],
+              "query": [
+                {"key": "camera_id", "value": "1"},
+                {"key": "gender", "value": "male"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Detection Stats",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/detections/stats"
+          }
+        },
+        {
+          "name": "Get Stats by Camera",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/detections/stats?camera_id=1"
+          }
+        },
+        {
+          "name": "Create Detection",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/detections/",
+            "body": {
+              "mode": "json",
+              "raw": "{\n  \"camera_id\": 1,\n  \"gender\": \"female\",\n  \"confidence\": 0.87\n}"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
