@@ -6,8 +6,8 @@
 |------|--------|-------------|
 | 1. Definición | ✅ Completado | Documentación del proyecto |
 | 2. Infraestructura | 🔄 En progreso | Docker, estructura de carpetas |
-| 3. Base de datos | ⏳ Pendiente | Modelos y migraciones |
-| 4. Backend | ⏳ Pendiente | API FastAPI |
+| 3. Base de datos | ✅ Completado | Modelos y migraciones |
+| 4. Backend | ✅ Completado | API FastAPI |
 | 5. Frontend | ⏳ Pendiente | Dashboard Streamlit |
 | 6. PoC Visión | ⏳ Pendiente | Detección facial con OpenCV/ONNX |
 | 7. Integración | ⏳ Pendiente | Conectar todos los servicios |
@@ -102,6 +102,34 @@
 - Frontend: http://localhost:8501
 
 **Próximo paso:** Fase 3 - Base de datos (crear modelos)
+
+### 2026-03-30 - Base de Datos y API
+
+**Evento:** Se crearon las tablas y endpoints de la API
+
+**Acciones realizadas:**
+- Creación de scripts SQL en `scriptsDB/init_db.sql`
+- Creación de modelos SQLAlchemy:
+  - `app/models/camera.py` (tabla cameras)
+  - `app/models/detection.py` (tabla detections)
+- Creación de schemas Pydantic:
+  - `app/schemas/camera.py`
+  - `app/schemas/detection.py`
+- Creación de endpoints API:
+  - `/api/cameras/` (CRUD completo)
+  - `/api/detections/` (CRUD + estadísticas)
+- Pruebas completas de CRUD
+- Corrección de conflicto de puerto (5432 → 5433)
+- Creación de colección Postman (`postman_collection.json`)
+- Creación de README.md
+
+**Datos de prueba:**
+- Cámara 1: "Cámara Principal" (id=3) - 3 detecciones
+- Cámara 2: "Cámara Estacionamiento" (id=4) - 2 detecciones
+
+**Puerto actualizado:** PostgreSQL ahora usa 5433 (externo)
+
+**Próximo paso:** Fase 5 - Frontend (Dashboard Streamlit)
 
 ---
 
