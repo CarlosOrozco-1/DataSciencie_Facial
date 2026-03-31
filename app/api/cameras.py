@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import List
 import cv2
+import io
 from app.database.connection import get_db
 from app.models.camera import Camera
 from app.schemas.camera import CameraCreate, CameraUpdate, CameraResponse
+from app.api.processing import active_processors
 
 router = APIRouter(prefix="/api/cameras", tags=["cameras"])
 
@@ -147,3 +150,22 @@ def test_camera_connection(camera_id: int, db: Session = Depends(get_db)):
             "connected": False,
             "message": f"Error: {str(e)}"
         }
+
+@router.get("/{camera_id}/frame")
+def get_camera_frame(camera_id: int, db: Session = Depends(get_db)):
+    """Obtiene el frame actual de una cámara activa en procesamiento"""
+    if camera_id not in active_processors:
+        raise HTTPException(status_code=404, detail="Cámara no está en procesamiento")
+    
+    processor = active_processors[camera_id]
+    frame = processor.get_current_frame()
+    
+    if frame is None:
+        raise HTTPException(status_code=500, detail="No se pudo obtener frame")
+    
+    # Convertir frame a JPEG
+    _, buffer = cv2.imencode('.jpg', frame)
+    img_io = io.BytesIO(buffer)
+    img_io.seek(0)
+    
+    return StreamingResponse(img_io, media_type="image/jpeg")

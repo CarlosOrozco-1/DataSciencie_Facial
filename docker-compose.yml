@@ -42,6 +42,8 @@ services:
       - /dev/video0:/dev/video0
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    networks:
+      - facial_network
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:
