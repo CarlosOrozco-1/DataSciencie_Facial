@@ -2,19 +2,67 @@
 
 ## Comandos de Ejecución
 
-### Iniciar Docker
+### Iniciar todos los servicios
 ```bash
 docker compose up -d
 ```
 
-### Detener Docker
+### Detener todos los servicios
 ```bash
 docker compose down
 ```
 
+### Iniciar servicios específicos
+```bash
+# Solo backend
+docker compose up -d app
+
+# Solo frontend
+docker compose up -d frontend
+
+# Solo base de datos
+docker compose up -d db
+
+# Backend + Frontend (sin DB)
+docker compose up -d app frontend
+
+# Backend + DB (sin Frontend)
+docker compose up -d app db
+```
+
+### Detener servicios específicos
+```bash
+# Detener backend
+docker compose stop app
+
+# Detener frontend
+docker compose stop frontend
+
+# Detener base de datos
+docker compose stop db
+
+# Detener backend + frontend
+docker compose stop app frontend
+```
+
+### Reiniciar servicios
+```bash
+# Reiniciar todos
+docker compose restart
+
+# Reiniciar servicio específico
+docker compose restart app
+docker compose restart frontend
+```
+
 ### Ver logs
 ```bash
-docker compose logs -f [servicio]
+# Logs de un servicio
+docker compose logs -f app
+docker compose logs -f frontend
+
+# Logs de todos los servicios
+docker compose logs -f
 ```
 
 ### Reconstruir contenedores

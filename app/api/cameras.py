@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
+import cv2
 from app.database.connection import get_db
 from app.models.camera import Camera
 from app.schemas.camera import CameraCreate, CameraUpdate, CameraResponse
@@ -49,3 +50,100 @@ def delete_camera(camera_id: int, db: Session = Depends(get_db)):
     db.delete(db_camera)
     db.commit()
     return {"message": "Camera deleted successfully"}
+
+@router.get("/{camera_id}/status")
+def check_camera_status(camera_id: int, db: Session = Depends(get_db)):
+    """Verifica si una cámara está accessible"""
+    camera = db.query(Camera).filter(Camera.id == camera_id).first()
+    if not camera:
+        raise HTTPException(status_code=404, detail="Camera not found")
+    
+    try:
+        url = camera.url
+        if camera.username and camera.password:
+            if url.startswith("rtsp://"):
+                url = url.replace("rtsp://", f"rtsp://{camera.username}:{camera.password}@", 1)
+        
+        if url.isdigit():
+            cap = cv2.VideoCapture(int(url), cv2.CAP_V4L2)
+        else:
+            cap = cv2.VideoCapture(url)
+        
+        is_open = cap.isOpened()
+        
+        if is_open:
+            for _ in range(3):
+                ret, frame = cap.read()
+                if ret and frame is not None:
+                    break
+        
+        cap.release()
+        
+        return {
+            "camera_id": camera_id,
+            "name": camera.name,
+            "url": camera.url,
+            "status": "online" if is_open else "offline",
+            "accessible": is_open
+        }
+    except Exception as e:
+        return {
+            "camera_id": camera_id,
+            "name": camera.name,
+            "url": camera.url,
+            "status": "error",
+            "accessible": False,
+            "error": str(e)
+        }
+
+@router.post("/{camera_id}/test")
+def test_camera_connection(camera_id: int, db: Session = Depends(get_db)):
+    """Prueba la conexión a una cámara y retorna un frame"""
+    camera = db.query(Camera).filter(Camera.id == camera_id).first()
+    if not camera:
+        raise HTTPException(status_code=404, detail="Camera not found")
+    
+    try:
+        url = camera.url
+        if camera.username and camera.password:
+            if url.startswith("rtsp://"):
+                url = url.replace("rtsp://", f"rtsp://{camera.username}:{camera.password}@", 1)
+            elif url.startswith("http://"):
+                url = url.replace("http://", f"http://{camera.username}:{camera.password}@", 1)
+        
+        cap = cv2.VideoCapture(url)
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        cap.set(cv2.CAP_PROP_FPS, 10)
+        cap.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 3000)
+        
+        if not cap.isOpened():
+            cap.release()
+            return {
+                "camera_id": camera_id,
+                "connected": False,
+                "message": "No se pudo abrir la cámara"
+            }
+        
+        ret, frame = cap.read()
+        cap.release()
+        
+        if ret and frame is not None:
+            return {
+                "camera_id": camera_id,
+                "connected": True,
+                "message": "Cámara conectada exitosamente",
+                "frame_resolution": f"{frame.shape[1]}x{frame.shape[0]}"
+            }
+        else:
+            return {
+                "camera_id": camera_id,
+                "connected": False,
+                "message": "No se pudo leer frames de la cámara"
+            }
+    except Exception as e:
+        return {
+            "camera_id": camera_id,
+            "connected": False,
+            "message": f"Error: {str(e)}"
+        }

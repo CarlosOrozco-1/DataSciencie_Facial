@@ -37,8 +37,11 @@ services:
     volumes:
       - ./app:/app/app
       - ./models:/app/models
-    networks:
-      - facial_network
+      - ./backend:/app/backend
+    devices:
+      - /dev/video0:/dev/video0
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:
