@@ -7,6 +7,7 @@ export function WebcamDetection({ onDetection, isDetecting, cameraId = 1, device
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [hasPermission, setHasPermission] = useState(null);
+  const [cameraError, setCameraError] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [lastResult, setLastResult] = useState(null);
 
@@ -23,10 +24,12 @@ export function WebcamDetection({ onDetection, isDetecting, cameraId = 1, device
       let stream;
       try {
         stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints });
+        setCameraError(null);
       } catch (innerErr) {
         if (innerErr.name === 'OverconstrainedError' || innerErr.name === 'NotReadableError') {
-          console.warn("No se pudo usar la cámara exacta (OverconstrainedError). Usando cámara por defecto.");
-          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+          console.warn("No se pudo usar la cámara exacta (OverconstrainedError).");
+          setCameraError("La cámara seleccionada no está conectada o está apagada. Por favor seleccione otra cámara desde el menú desplegable.");
+          return; // Detenemos aquí en lugar de cambiar la cámara por debajo de la mesa
         } else {
           throw innerErr;
         }
@@ -38,6 +41,7 @@ export function WebcamDetection({ onDetection, isDetecting, cameraId = 1, device
       }
     } catch (err) {
       console.error("Error accessing webcam:", err);
+      setCameraError("Permiso denegado o no hay cámaras disponibles.");
       setHasPermission(false);
     }
   };
@@ -106,8 +110,14 @@ export function WebcamDetection({ onDetection, isDetecting, cameraId = 1, device
   }, [isDetecting, captureAndDetect]);
 
   return (
-    <div className="card" style={{ position: 'relative', overflow: 'hidden', minHeight: '400px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
-      {!hasPermission && hasPermission !== null && (
+    <div className="card" style={{ position: 'relative', overflow: 'hidden', minHeight: '400px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 0, backgroundColor: 'var(--bg-card)' }}>
+      {cameraError ? (
+         <div style={{ padding: '2rem', textAlign: 'center' }}>
+           <span style={{ fontSize: '3rem', display: 'block', marginBottom: '1rem' }}>⚠️</span>
+           <h3 style={{ color: 'var(--accent-danger)', marginBottom: '0.5rem' }}>Error de Cámara</h3>
+           <p style={{ color: 'var(--text-secondary)' }}>{cameraError}</p>
+         </div>
+      ) : !hasPermission && hasPermission !== null && (
         <div style={{ padding: '2rem', textAlign: 'center' }}>
           <AlertCircle style={{ width: '3rem', height: '3rem', color: 'var(--danger)', margin: '0 auto 1rem' }} />
           <p style={{ fontSize: '1.125rem', fontWeight: 500, marginBottom: '1rem' }}>Acceso a cámara denegado</p>
