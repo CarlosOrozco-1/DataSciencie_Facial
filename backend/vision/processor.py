@@ -254,9 +254,15 @@ class VideoProcessor:
                 ret, frame = self.cap.read()
                 
                 if not ret:
-                    logger.warning(f"[Cámara {self.camera_id}] No se pudo leer frame")
+                    self.connection_retries += 1
+                    logger.warning(f"[Cámara {self.camera_id}] No se pudo leer frame ({self.connection_retries}/{self.MAX_RETRIES})")
+                    if self.connection_retries > self.MAX_RETRIES:
+                        logger.error(f"[Cámara {self.camera_id}] Se perdió conexión con la cámara de forma definitiva.")
+                        break
                     time.sleep(1)
                     continue
+                else:
+                    self.connection_retries = 0
                 
                 self.frame_count += 1
                 

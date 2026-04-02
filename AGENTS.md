@@ -202,3 +202,6 @@ docker stats
 # Limpiar recursos no usados
 docker system prune
 ```
+
+## Reglas de Desarrollo
+- **Comentarios Obligatorios**: Todo cambio o inserción de nuevo código DEBE incluir un comentario explicativo que indique la justificación del cambio o la función del código nuevo añadido en el sistema.

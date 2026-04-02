@@ -6,7 +6,17 @@ from datetime import datetime
 from app.database.connection import get_db
 from app.models.detection import Detection
 from app.models.camera import Camera
-from app.schemas.detection import DetectionCreate, DetectionResponse, DetectionStats
+from app.schemas.detection import DetectionCreate, DetectionResponse, DetectionStats, FrameAnalysisRequest
+import base64
+import cv2
+import numpy as np
+import logging
+from backend.vision.detector import FaceDetector
+from backend.vision.estimator import GenderEstimator
+
+logger = logging.getLogger(__name__)
+detector = FaceDetector()
+estimator = GenderEstimator()
 
 router = APIRouter(prefix="/api/detections", tags=["detections"])
 
@@ -66,3 +76,49 @@ def create_detection(detection: DetectionCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_detection)
     return db_detection
+
+@router.post("/analyze_frame")
+def analyze_frame(request: FrameAnalysisRequest, db: Session = Depends(get_db)):
+    try:
+        # Extraer base64 si incluye el prefijo 'data:image/jpeg;base64,'
+        encoded_data = request.image_base64
+        if ',' in encoded_data:
+            encoded_data = encoded_data.split(',')[1]
+            
+        img_data = base64.b64decode(encoded_data)
+        nparr = np.frombuffer(img_data, np.uint8)
+        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        
+        if frame is None:
+            raise HTTPException(status_code=400, detail="Invalid image data")
+            
+        faces = detector.detect_faces(frame)
+        
+        detected_gender = "none_detected"
+        
+        if len(faces) > 0:
+            # Por simplicidad tomamos la primera cara
+            face_box = faces[0]
+            roi = detector.get_face_roi(frame, face_box)
+            if roi is not None and roi.size > 0:
+                gender, confidence = estimator.estimate_gender(roi)
+                detected_gender = gender
+                
+                # Guarda registro si hay una cámara y es una detección válida
+                # camera_id puede venir o usarse uno estático/existente
+                if request.camera_id > 0:
+                    camera = db.query(Camera).filter(Camera.id == request.camera_id).first()
+                    if camera:
+                        db_detection = Detection(
+                            camera_id=request.camera_id,
+                            gender=gender,
+                            confidence=confidence
+                        )
+                        db.add(db_detection)
+                        db.commit()
+
+        return {"gender": detected_gender}
+        
+    except Exception as e:
+        logger.error(f"Error en analyze_frame: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

@@ -127,6 +127,17 @@
               "raw": "{\n  \"camera_id\": 1,\n  \"gender\": \"female\",\n  \"confidence\": 0.87\n}"
             }
           }
+        },
+        {
+          "name": "Analyze Frame",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/detections/analyze_frame",
+            "body": {
+              "mode": "json",
+              "raw": "{\n  \"camera_id\": 1,\n  \"image_base64\": \"data:image/jpeg;base64,/9j/4AAQSkZJR... (insert base64 here)\"\n}"
+            }
+          }
         }
       ]
     }

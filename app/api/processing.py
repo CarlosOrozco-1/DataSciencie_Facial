@@ -85,7 +85,16 @@ def stop_processing(camera_id: int, db: Session = Depends(get_db)):
 @router.get("/status")
 def get_processing_status(db: Session = Depends(get_db)):
     """Obtiene el estado de todos los procesamientos activos"""
-    # Usar el estado en memoria para que no haya desincronización con la BD tras reinicios
+    # Limpiar procesadores muertos (cámaras desconectadas términadas)
+    dead_ids = [cid for cid, proc in list(active_processors.items()) if not proc.is_connected()]
+    for cid in dead_ids:
+        active_processors.pop(cid, None)
+        cam = db.query(Camera).filter(Camera.id == cid).first()
+        if cam:
+            cam.is_processing = False
+            db.commit()
+            
+    # Usar el estado en memoria para que no haya desincronización
     active_ids = list(active_processors.keys())
     if not active_ids:
         return {"active_cameras": []}

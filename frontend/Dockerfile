@@ -1,16 +1,15 @@
-FROM python:3.11-slim
+FROM node:22
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y \
-    libpq-dev \
-    gcc \
-    && rm -rf /var/lib/apt/lists*
+# Copiar configuración de instalación
+COPY package.json package-lock.json* ./
 
-COPY requirements.txt /app/requirements.txt
+# Instalación global e inicial
+RUN npm install
 
-RUN pip install --no-cache-dir -r requirements.txt
+# Copiar el código fuente
+COPY . .
 
-COPY . /app/
-
+# Exponer el puerto
 EXPOSE 8501

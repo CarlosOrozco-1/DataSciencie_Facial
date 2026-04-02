@@ -18,11 +18,12 @@ class CameraBase(BaseModel):
         if not v:
             raise ValueError("URL no puede estar vacía")
         
-        # Permitir URLs RTSP, HTTP, HTTPS o índices numéricos (para /dev/videoX)
+        # Permitir URLs RTSP, HTTP, HTTPS, índices numéricos o hashes de device ID del navegador
         valid_patterns = [
             r'^rtsp://.*',           # RTSP
             r'^https?://.*',         # HTTP/HTTPS
             r'^\d+$',                # Índice de cámara local (0, 1, 2...)
+            r'^[a-zA-Z0-9_\-]+$',    # Device ID hash (browser devices)
         ]
         
         if not any(re.match(pattern, v) for pattern in valid_patterns):
@@ -63,11 +64,12 @@ class CameraUpdate(BaseModel):
         if not v:
             raise ValueError("URL no puede estar vacía")
         
-        # Permitir URLs RTSP, HTTP, HTTPS o índices numéricos
+        # Permitir URLs RTSP, HTTP, HTTPS, índices numéricos o hashes
         valid_patterns = [
             r'^rtsp://.*',
             r'^https?://.*',
             r'^\d+$',
+            r'^[a-zA-Z0-9_\-]+$',
         ]
         
         if not any(re.match(pattern, v) for pattern in valid_patterns):
