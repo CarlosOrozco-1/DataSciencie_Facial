@@ -12,6 +12,7 @@ export default function CameraManager() {
   const [formData, setFormData] = useState({ name: '', location: '', url: '' })
   const [loading, setLoading] = useState(true)
   const [localDevices, setLocalDevices] = useState([])
+  const [cameraToDelete, setCameraToDelete] = useState(null)
 
   const fetchCameras = async () => {
     try {
@@ -71,14 +72,23 @@ export default function CameraManager() {
     }
   }
 
-  const handleDelete = async (id) => {
-    if(!confirm("¿Seguro que deseas eliminar esta cámara?")) return;
+  const handleDeleteRequest = (id) => {
+    setCameraToDelete(id)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!cameraToDelete) return;
     try {
-      await fetch(`${API_URL}/api/cameras/${id}`, { method: 'DELETE' })
+      await fetch(`${API_URL}/api/cameras/${cameraToDelete}`, { method: 'DELETE' })
+      setCameraToDelete(null)
       fetchCameras()
     } catch (e) {
       alert("Error eliminando")
     }
+  }
+
+  const handleCancelDelete = () => {
+    setCameraToDelete(null)
   }
 
   const handleToggleProcessing = async (id, isCurrentlyActive) => {
@@ -180,7 +190,7 @@ export default function CameraManager() {
                 </div>
                 
                 <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.9rem' }}>📍 {cam.location || 'Sin Ubicación'}</p>
-                <code style={{ fontSize: '0.8rem', color: 'var(--accent-secondary)', backgroundColor: 'rgba(0,0,0,0.3)', padding: '4px', borderRadius: '4px' }}>
+                <code style={{ fontSize: '0.8rem', color: 'var(--accent-secondary)', backgroundColor: 'rgba(0,0,0,0.3)', padding: '4px', borderRadius: '4px', wordBreak: 'break-all' }}>
                   {cam.url}
                 </code>
                 
@@ -195,7 +205,7 @@ export default function CameraManager() {
                   <button 
                     className="btn btn-danger" 
                     style={{ padding: '0.5rem' }}
-                    onClick={() => handleDelete(cam.id)}
+                    onClick={() => handleDeleteRequest(cam.id)}
                   >
                     🗑️
                   </button>
@@ -206,6 +216,25 @@ export default function CameraManager() {
           {cameras.length === 0 && <p>No hay cámaras registradas.</p>}
         </div>
       </div>
+
+      {cameraToDelete !== null && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+          <div className="card" style={{ maxWidth: '400px', width: '90%', padding: '2rem', textAlign: 'center', border: '1px solid var(--border-subtle)' }}>
+            <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: 'white' }}>Confirmar Eliminación</h3>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
+              ¿Estás seguro que deseas eliminar esta cámara de forma permanente?
+            </p>
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+              <button className="btn" style={{ flex: 1, backgroundColor: 'var(--border-subtle)', color: 'white' }} onClick={handleCancelDelete}>
+                Cancelar
+              </button>
+              <button className="btn btn-danger" style={{ flex: 1 }} onClick={handleConfirmDelete}>
+                Sí, Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
