@@ -26,10 +26,11 @@ class UserChangePassword(BaseModel):
     current_password: str
     new_password: str
 
-# Schema de respuesta (nunca expone el hash de la contraseña)
+# Schema de respuesta (nunca expone el hash ni el secreto TOTP codigo de 6 digitos generado por la app)
 class UserResponse(UserBase):
     id: int
     is_active: bool
+    is_2fa_enabled: bool = False
     created_at: Optional[datetime] = None
 
     class Config:
@@ -40,5 +41,33 @@ class Token(BaseModel):
     access_token: str
     token_type: str
 
+# Respuesta de login que puede requerir 2FA
+class LoginResponse(BaseModel):
+    access_token: Optional[str] = None
+    token_type: Optional[str] = None
+    requires_2fa: bool = False
+    temp_token: Optional[str] = None
+
 class TokenData(BaseModel):
     email: str | None = None
+
+# Schemas para recuperación de contraseña
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+# Schemas para 2FA
+class TwoFactorSetupResponse(BaseModel):
+    qr_code: str  # Imagen QR en base64
+    secret: str   # Clave secreta para ingreso manual
+    message: str
+
+class TwoFactorVerifyRequest(BaseModel):
+    code: str  # Código de 6 dígitos del authenticator
+
+class TwoFactorValidateRequest(BaseModel):
+    temp_token: str  # Token temporal del paso 1 del login
+    code: str        # Código de 6 dígitos

@@ -205,3 +205,4 @@ docker system prune
 
 ## Reglas de Desarrollo
 - **Comentarios Obligatorios**: Todo cambio o inserción de nuevo código DEBE incluir un comentario explicativo que indique la justificación del cambio o la función del código nuevo añadido en el sistema.
+- **Documentación Ordenada**: Toda documentación en formato `.md` que se cree en el proyecto, **exceptuando `AGENTS.md` y `README.md`**, DEBE ser ubicada dentro de la carpeta `Documentacion/` en la raíz del proyecto. Esto incluye guías, endpoints, changelogs, documentación técnica, etc. El objetivo es mantener un orden centralizado de toda la documentación del sistema.

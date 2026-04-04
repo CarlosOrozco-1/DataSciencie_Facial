@@ -4,36 +4,62 @@ import LiveView from './pages/LiveView'
 import CameraManager from './pages/CameraManager'
 import UserManager from './pages/UserManager'
 import Login from './pages/Login'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 import './index.css'
 
-// Componente raíz con control de autenticación JWT.
-// Si no hay token en localStorage, muestra Login.
-// Si hay token, muestra la aplicación con las 3 vistas disponibles.
+// Componente raíz con control de autenticación JWT y rutas de recuperación.
+// Detecta si hay un reset_token en la URL para mostrar la página de reset.
 function App() {
   const [currentPage, setCurrentPage] = useState('live')
   const [token, setToken] = useState(localStorage.getItem('token'))
+  const [authPage, setAuthPage] = useState('login') // login | forgot | reset
+  const [resetToken, setResetToken] = useState(null)
 
   useEffect(() => {
     const storedToken = localStorage.getItem('token')
-    if (storedToken) {
-      setToken(storedToken)
+    if (storedToken) setToken(storedToken)
+    
+    // Detectar token de reset en la URL (llegó por email)
+    const params = new URLSearchParams(window.location.search)
+    const urlResetToken = params.get('reset_token')
+    if (urlResetToken) {
+      setAuthPage('reset')
+      setResetToken(urlResetToken)
+      // Limpiar la URL para que no quede visible el token
+      window.history.replaceState({}, '', window.location.pathname)
     }
   }, [])
 
   const handleLogin = (newToken) => {
     setToken(newToken)
+    setAuthPage('login')
   }
 
   const handleLogout = () => {
     localStorage.removeItem('token')
     setToken(null)
+    setAuthPage('login')
   }
 
+  // Navegación entre páginas de auth (login, forgot, reset)
+  const handleAuthNavigate = (page) => {
+    setAuthPage(page)
+  }
+
+  // Si no hay token, mostrar flujo de autenticación
   if (!token) {
-    return <Login onLogin={handleLogin} />
+    switch (authPage) {
+      case 'forgot':
+        return <ForgotPassword onNavigate={handleAuthNavigate} />
+      case 'reset':
+        return <ResetPassword token={resetToken} onNavigate={handleAuthNavigate} />
+      default:
+        return <Login onLogin={handleLogin} onNavigate={handleAuthNavigate} />
+    }
   }
 
-  // Renderizado condicional de las páginas según navegación del sidebar
+  // Renderizado de páginas internas (autenticado)
   const renderPage = () => {
     switch (currentPage) {
       case 'live': return <LiveView />

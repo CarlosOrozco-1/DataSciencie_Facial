@@ -2,8 +2,10 @@ from sqlalchemy import Column, Integer, String, Boolean, DateTime
 from sqlalchemy.sql import func
 from app.database.connection import Base
 
-# Modelo de tabla de usuarios con campo username para login
-# y email para recuperación de contraseña
+# Modelo de usuario con soporte para 2FA TOTP
+# username: para login | email: para recuperación de contraseña
+# totp_secret: clave secreta compartida con Microsoft Authenticator
+# is_2fa_enabled: indica si el usuario activó la verificación en dos pasos
 class User(Base):
     __tablename__ = "users"
 
@@ -12,4 +14,6 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
+    totp_secret = Column(String, nullable=True)
+    is_2fa_enabled = Column(Boolean, default=False) #Autenticación en dos pasos
     created_at = Column(DateTime(timezone=True), server_default=func.now())
