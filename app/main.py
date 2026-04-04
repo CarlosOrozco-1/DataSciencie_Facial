@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from app.database.connection import init_db, SessionLocal
 from app.models import camera, detection, user
-from app.api import cameras, detections, processing, auth
+from app.api import cameras, detections, processing, auth, users
 from app.core import security
 
 app = FastAPI(title="Facial Recognition API")
@@ -33,6 +33,7 @@ async def jwt_handshake_monitor(request: Request, call_next):
     return response
 
 app.include_router(auth.router)
+app.include_router(users.router)
 app.include_router(cameras.router)
 app.include_router(detections.router)
 app.include_router(processing.router)
@@ -48,10 +49,10 @@ def startup_event():
         if not admin_user:
             print("🌱 Sembrando usuario Administrador de emergencia en la Base de Datos...")
             hashed_pwd = security.get_password_hash("password123")
-            new_admin = user.User(email=admin_email, hashed_password=hashed_pwd)
+            new_admin = user.User(username="admin", email=admin_email, hashed_password=hashed_pwd)
             db.add(new_admin)
             db.commit()
-            print("✅ Usuario admin@generosense.com generado con éxito.")
+            print("✅ Usuario admin (admin@generosense.com) generado con éxito.")
     except Exception as e:
         print(f"Error en seed user: {e}")
     finally:

@@ -1,11 +1,11 @@
 import { useState } from 'react'
 
 // Componente de Login con diseño glassmorphism oscuro
-// Se muestra cuando el usuario no tiene un token JWT válido en localStorage
+// Acepta username o email para iniciar sesión
 const API_URL = 'http://localhost:8000'
 
 export default function Login({ onLogin }) {
-  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -18,7 +18,7 @@ export default function Login({ onLogin }) {
     try {
       // OAuth2PasswordRequestForm espera form-data con "username" y "password"
       const formData = new URLSearchParams()
-      formData.append('username', email)
+      formData.append('username', username)
       formData.append('password', password)
 
       const res = await fetch(`${API_URL}/api/auth/login`, {
@@ -56,13 +56,13 @@ export default function Login({ onLogin }) {
         {/* Formulario de autenticación */}
         <form onSubmit={handleSubmit} className="login-form">
           <div className="form-group">
-            <label htmlFor="email">Correo electrónico</label>
+            <label htmlFor="username">Usuario o Correo electrónico</label>
             <input
-              id="email"
-              type="email"
-              placeholder="admin@generosense.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              id="username"
+              type="text"
+              placeholder="admin"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               required
               autoFocus
             />
