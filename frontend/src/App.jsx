@@ -3,6 +3,7 @@ import Sidebar from './components/Sidebar'
 import LiveView from './pages/LiveView'
 import CameraManager from './pages/CameraManager'
 import UserManager from './pages/UserManager'
+import Dashboard from './pages/Dashboard'
 import Login from './pages/Login'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
@@ -11,7 +12,7 @@ import './index.css'
 // Componente raíz con control de autenticación JWT y rutas de recuperación.
 // Detecta si hay un reset_token en la URL para mostrar la página de reset.
 function App() {
-  const [currentPage, setCurrentPage] = useState('live')
+  const [currentPage, setCurrentPage] = useState('dashboard')
   const [token, setToken] = useState(localStorage.getItem('token'))
   const [authPage, setAuthPage] = useState('login') // login | forgot | reset
   const [resetToken, setResetToken] = useState(null)
@@ -62,10 +63,11 @@ function App() {
   // Renderizado de páginas internas (autenticado)
   const renderPage = () => {
     switch (currentPage) {
+      case 'dashboard': return <Dashboard />
       case 'live': return <LiveView />
       case 'manager': return <CameraManager />
       case 'users': return <UserManager />
-      default: return <LiveView />
+      default: return <Dashboard />
     }
   }
 

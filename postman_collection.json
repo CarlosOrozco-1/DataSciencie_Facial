@@ -389,6 +389,7 @@
         {
           "name": "Estadísticas Globales",
           "request": {
+            "description": "Retorna totales de género y un arreglo 'history' con las detecciones de las últimas 24 horas agrupadas por hora.",
             "method": "GET",
             "url": "{{base_url}}/api/detections/stats"
           }

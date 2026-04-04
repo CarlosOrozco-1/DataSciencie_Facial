@@ -18,11 +18,16 @@ class DetectionResponse(DetectionBase):
     class Config:
         from_attributes = True
 
+class DetectionHistory(BaseModel):
+    label: str
+    count: int
+
 class DetectionStats(BaseModel):
     total_detections: int
     male_count: int
     female_count: int
     avg_confidence: float
+    history: Optional[list[DetectionHistory]] = []
 
 class FrameAnalysisRequest(BaseModel):
     image_base64: str

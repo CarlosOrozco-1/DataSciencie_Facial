@@ -1,4 +1,4 @@
-import { Camera, Settings, Activity, LogOut, Users } from 'lucide-react'
+import { Camera, Settings, Activity, LogOut, Users, LayoutDashboard } from 'lucide-react'
 
 // Componente Sidebar con navegación, módulo de usuarios y botón de cierre de sesión JWT
 export default function Sidebar({ currentPage, setCurrentPage, onLogout }) {
@@ -10,6 +10,14 @@ export default function Sidebar({ currentPage, setCurrentPage, onLogout }) {
       </div>
       
       <nav>
+        <button 
+          onClick={() => setCurrentPage('dashboard')}
+          className={`nav-link ${currentPage === 'dashboard' ? 'active' : ''}`}
+        >
+          <LayoutDashboard size={20} />
+          Dashboard
+        </button>
+
         <button 
           onClick={() => setCurrentPage('live')}
           className={`nav-link ${currentPage === 'live' ? 'active' : ''}`}
