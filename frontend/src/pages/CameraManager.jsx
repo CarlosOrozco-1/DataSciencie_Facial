@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
-
-const API_URL = 'http://localhost:8000';
+import { authFetch, API_URL } from '../utils/api'
 
 // [NUEVO CÓDIGO]: Lógica de gestión de cámaras con React.
 // Maneja peticiones POST y DELETE a FastAPI simulando el comportamiento preexistente 
@@ -17,8 +16,8 @@ export default function CameraManager() {
   const fetchCameras = async () => {
     try {
       const [camRes, statRes] = await Promise.all([
-        fetch(`${API_URL}/api/cameras/`),
-        fetch(`${API_URL}/api/processing/status`)
+        authFetch(`${API_URL}/api/cameras/`),
+        authFetch(`${API_URL}/api/processing/status`)
       ])
       
       const camData = await camRes.json()
@@ -54,11 +53,8 @@ export default function CameraManager() {
   const handleAddCamera = async (e) => {
     e.preventDefault()
     try {
-      const res = await fetch(`${API_URL}/api/cameras/`, {
+      const res = await authFetch(`${API_URL}/api/cameras/`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify(formData)
       })
       if (res.ok) {
@@ -79,7 +75,7 @@ export default function CameraManager() {
   const handleConfirmDelete = async () => {
     if (!cameraToDelete) return;
     try {
-      await fetch(`${API_URL}/api/cameras/${cameraToDelete}`, { method: 'DELETE' })
+      await authFetch(`${API_URL}/api/cameras/${cameraToDelete}`, { method: 'DELETE' })
       setCameraToDelete(null)
       fetchCameras()
     } catch (e) {
@@ -94,7 +90,7 @@ export default function CameraManager() {
   const handleToggleProcessing = async (id, isCurrentlyActive) => {
     const method = isCurrentlyActive ? 'stop' : 'start';
     try {
-      await fetch(`${API_URL}/api/processing/${method}/${id}`, { method: 'POST' })
+      await authFetch(`${API_URL}/api/processing/${method}/${id}`, { method: 'POST' })
       fetchCameras()
     } catch (e) {
       alert(`Error al intentar ${method} el procesamiento`)

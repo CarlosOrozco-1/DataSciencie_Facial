@@ -7,6 +7,7 @@ from app.database.connection import get_db
 from app.models.detection import Detection
 from app.models.camera import Camera
 from app.schemas.detection import DetectionCreate, DetectionResponse, DetectionStats, FrameAnalysisRequest
+from app.core.security import get_current_user
 import base64
 import cv2
 import numpy as np
@@ -18,7 +19,11 @@ logger = logging.getLogger(__name__)
 detector = FaceDetector()
 estimator = GenderEstimator()
 
-router = APIRouter(prefix="/api/detections", tags=["detections"])
+router = APIRouter(
+    prefix="/api/detections", 
+    tags=["detections"],
+    dependencies=[Depends(get_current_user)]
+)
 
 @router.get("/", response_model=List[DetectionResponse])
 def get_detections(

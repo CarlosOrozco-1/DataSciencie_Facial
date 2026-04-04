@@ -137,6 +137,14 @@ docker compose exec db psql -U facial_user -d facial_db
 docker compose exec db psql -U facial_user -d facial_db -c "\dt"
 ```
 
+## Integración de Cámaras de Terceros (Tuya/Nexxt)
+
+Para cámaras basadas en Tuya/Smart Life (ej. Nexxt) que no proveen RTSP directo, recomendamos inicializar un puente local utilizando [tuya-ipc-terminal](https://github.com/seydx/tuya-ipc-terminal).
+
+Esta utilidad CLI de código abierto se conecta a la API reservada de Tuya y convierte el stream propietario en un servidor RTSP estándar localizado en `localhost`. 
+Ejemplo de configuración generada por el terminal: `rtsp://localhost:8554/Camara_Exterior_/hd`
+El proyecto es capaz de consumir estos streams generados de forma nativa e insertarlos en el ecosistema (Dashboard) junto con las cámaras USB convencionales utilizando un sistema híbrido de inyección e interfaz MJPEG.
+
 ## Consideraciones Éticas
 
 Este sistema realiza inferencias visuales automáticas con fines analíticos. No determina identidad de género, solo estimaciones basadas en características faciales.

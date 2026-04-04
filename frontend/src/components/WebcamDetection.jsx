@@ -1,7 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Camera, CameraOff, Loader2, User, UserRound, AlertCircle } from 'lucide-react';
-
-const API_URL = 'http://localhost:8000';
+import { authFetch, API_URL } from '../utils/api';
 
 export function WebcamDetection({ onDetection, isDetecting, cameraId = 1, deviceId }) {
   const videoRef = useRef(null);
@@ -70,11 +69,8 @@ export function WebcamDetection({ onDetection, isDetecting, cameraId = 1, device
       
       setIsProcessing(true);
       try {
-        const response = await fetch(`${API_URL}/api/detections/analyze_frame`, {
+        const response = await authFetch(`${API_URL}/api/detections/analyze_frame`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
           body: JSON.stringify({
             image_base64: imageDataUri,
             camera_id: cameraId

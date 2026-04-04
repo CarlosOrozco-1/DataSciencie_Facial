@@ -29,6 +29,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-facial_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-facial_pass}
       POSTGRES_DB: ${POSTGRES_DB:-facial_db}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
     ports:
       - "8000:8000"
     depends_on:

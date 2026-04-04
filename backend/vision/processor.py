@@ -102,7 +102,10 @@ class VideoProcessor:
                 logger.info(f"[Cámara {self.camera_id}] Usando V4L2 para webcam local")
             else:
                 # RTSP/HTTP
-                self.cap = cv2.VideoCapture(url)
+                import os
+                if url.startswith("rtsp://"):
+                    os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp"
+                self.cap = cv2.VideoCapture(url, cv2.CAP_FFMPEG)
                 self.cap.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, self.RECONNECT_TIMEOUT * 1000)
             
             # Intentar leer algunos frames para verificar

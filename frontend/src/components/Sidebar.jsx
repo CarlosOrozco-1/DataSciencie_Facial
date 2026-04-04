@@ -1,13 +1,12 @@
-import { Camera, Settings, Activity } from 'lucide-react'
+import { Camera, Settings, Activity, LogOut } from 'lucide-react'
 
-// [NUEVO CÓDIGO]: Componente Sidebar para reemplazar el st.sidebar de Streamlit.
-// Usa íconos de lucide-react y mantiene un diseño oscuro premium.
-export default function Sidebar({ currentPage, setCurrentPage }) {
+// Componente Sidebar con navegación y botón de cierre de sesión JWT
+export default function Sidebar({ currentPage, setCurrentPage, onLogout }) {
   return (
     <aside className="sidebar">
       <div className="brand-title">
         <Activity size={28} />
-        FaceGuard
+        GenderSense
       </div>
       
       <nav>
@@ -28,8 +27,19 @@ export default function Sidebar({ currentPage, setCurrentPage }) {
         </button>
       </nav>
       
-      <div style={{ marginTop: 'auto', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-        Sistema de Reconocimiento v2.0
+      <div style={{ marginTop: 'auto' }}>
+        {/* Botón para cerrar sesión y eliminar token JWT */}
+        <button 
+          onClick={onLogout}
+          className="nav-link"
+          style={{ color: 'var(--danger)', width: '100%' }}
+        >
+          <LogOut size={20} />
+          Cerrar Sesión
+        </button>
+        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '1rem' }}>
+          Sistema de Reconocimiento v2.0
+        </div>
       </div>
     </aside>
   )

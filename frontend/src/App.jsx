@@ -1,19 +1,45 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Sidebar from './components/Sidebar'
 import LiveView from './pages/LiveView'
 import CameraManager from './pages/CameraManager'
+import Login from './pages/Login'
 import './index.css'
 
-// [CAMBIO REALIZADO]: Componente raíz que maneja el estado global de navegación.
-// En lugar de usar react-router, optamos por renderizado condicional simple
-// dado que solo hay dos vistas (Vista en Vivo y Gestión de Cámaras).
+// Componente raíz con control de autenticación JWT.
+// Si no hay token en localStorage, muestra Login.
+// Si hay token, muestra la aplicación normalmente.
 function App() {
   const [currentPage, setCurrentPage] = useState('live')
+  const [token, setToken] = useState(localStorage.getItem('token'))
+
+  // Verificar si el token almacenado sigue siendo válido al cargar
+  useEffect(() => {
+    const storedToken = localStorage.getItem('token')
+    if (storedToken) {
+      setToken(storedToken)
+    }
+  }, [])
+
+  // Callback cuando el usuario se loguea exitosamente
+  const handleLogin = (newToken) => {
+    setToken(newToken)
+  }
+
+  // Cerrar sesión eliminando el token
+  const handleLogout = () => {
+    localStorage.removeItem('token')
+    setToken(null)
+  }
+
+  // Si no hay token, mostrar pantalla de login
+  if (!token) {
+    return <Login onLogin={handleLogin} />
+  }
 
   return (
     <div className="app-layout">
-      {/* Componente lateral de navegación */}
-      <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
+      {/* Componente lateral de navegación con botón de logout */}
+      <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} onLogout={handleLogout} />
       
       {/* Contenedor principal donde se inyecta la página seleccionada */}
       <main className="main-content">

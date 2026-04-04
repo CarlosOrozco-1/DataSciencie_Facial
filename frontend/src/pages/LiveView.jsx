@@ -14,9 +14,9 @@ import {
 } from 'lucide-react';
 import { StatsCard } from '../components/StatsCard';
 import { WebcamDetection } from '../components/WebcamDetection';
+import { RtspDetection } from '../components/RtspDetection';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-
-const API_URL = 'http://localhost:8000';
+import { authFetch, API_URL } from '../utils/api';
 
 export default function LiveView() {
   const [cameras, setCameras] = useState([]);
@@ -30,7 +30,7 @@ export default function LiveView() {
 
   const fetchCameras = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/cameras/`);
+      const res = await authFetch(`${API_URL}/api/cameras/`);
       const data = await res.json();
       setCameras(data);
       if (data.length > 0) {
@@ -45,19 +45,40 @@ export default function LiveView() {
     fetchCameras();
   }, []);
 
-  const totalCount = maleCount + femaleCount;
-  
-  const handleDetection = (gender) => {
-    if (gender === 'male') {
-      setMaleCount(prev => prev + 1);
-    } else if (gender === 'female') {
-      setFemaleCount(prev => prev + 1);
+  const fetchStats = async () => {
+    if (!selectedCam) return;
+    try {
+      const res = await authFetch(`${API_URL}/api/detections/stats?camera_id=${selectedCam}`);
+      const data = await res.json();
+      setMaleCount(data.male_count || 0);
+      setFemaleCount(data.female_count || 0);
+    } catch (err) {
+      console.error(err);
     }
   };
 
+  // Polling de estadísticas
+  React.useEffect(() => {
+    fetchStats(); // Fetch inicial al cambiar de cámara
+    let interval;
+    if (isDetecting && selectedCam) {
+      interval = setInterval(fetchStats, 3000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    }
+  }, [selectedCam, isDetecting]);
+
+  const totalCount = maleCount + femaleCount;
+  
+  // Mantenemos handleDetection vacio si la webcam lo llama, ya que ahora 
+  // polling nos proveerá los datos frescos de la BD directamente.
+  const handleDetection = (gender) => {};
+
   const resetCounts = () => {
-    setMaleCount(0);
-    setFemaleCount(0);
+    // Si queremos reiniciar el backend, tendríamos que mandar un DELETE logico. 
+    // Por ahora, recargamos la página o solo ignoramos el botón local.
+    fetchStats();
   };
 
   const chartData = useMemo(() => [
@@ -123,14 +144,23 @@ export default function LiveView() {
               </h2>
             </div>
             
-            {/* Aquí integramos el componente que consume la cámara local y consulta al backend python */}
+            {/* Aquí integramos el componente híbrido según el URL */}
             {cameras.length > 0 && selectedCam ? (
-              <WebcamDetection 
-                onDetection={handleDetection} 
-                isDetecting={isDetecting} 
-                cameraId={parseInt(selectedCam)}
-                deviceId={cameras.find(c => c.id.toString() === selectedCam)?.url}
-              />
+              cameras.find(c => c.id.toString() === selectedCam)?.url?.startsWith('rtsp://') ? (
+                <RtspDetection 
+                  key={`rtsp-${selectedCam}`}
+                  cameraId={parseInt(selectedCam)}
+                  isDetecting={isDetecting} 
+                />
+              ) : (
+                <WebcamDetection 
+                  key={`webcam-${selectedCam}`}
+                  onDetection={handleDetection} 
+                  isDetecting={isDetecting} 
+                  cameraId={parseInt(selectedCam)}
+                  deviceId={cameras.find(c => c.id.toString() === selectedCam)?.url}
+                />
+              )
             ) : (
               <div className="card" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
                 No hay cámaras configuradas. Ve a Gestión de Cámaras para agregar una.

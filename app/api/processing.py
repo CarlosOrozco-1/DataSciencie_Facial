@@ -10,8 +10,13 @@ from app.database.connection import get_db
 from app.models.camera import Camera
 from app.models.detection import Detection
 from backend.vision.processor import VideoProcessor
+from app.core.security import get_current_user
 
-router = APIRouter(prefix="/api/processing", tags=["processing"])
+router = APIRouter(
+    prefix="/api/processing", 
+    tags=["processing"],
+    dependencies=[Depends(get_current_user)]
+)
 
 active_processors: Dict[int, VideoProcessor] = {}
 
