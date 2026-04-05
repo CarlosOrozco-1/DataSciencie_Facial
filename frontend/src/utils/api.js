@@ -1,6 +1,11 @@
 // Helper centralizado para todas las peticiones autenticadas con JWT
-// Inyecta automáticamente el header Authorization: Bearer <token>
-const API_URL = 'http://localhost:8000'
+// En desarrollo usa localhost:8000, en producción usa la ruta relativa del proxy
+const API_URL = window.location.hostname === 'localhost' 
+  ? 'http://localhost:8000' 
+  : window.location.origin;
+
+// Exportamos también el prefijo base si es necesario para otros módulos
+const API_BASE = window.location.hostname === 'localhost' ? API_URL : `${window.location.origin}/api`;
 
 export function getAuthHeaders() {
   const token = localStorage.getItem('token')

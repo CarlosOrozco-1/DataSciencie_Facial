@@ -1,0 +1,32 @@
+{
+    # Global options
+    # email {$SMTP_USER} # Opcional: Para notificaciones de certificados
+}
+
+# Configuración Dinámica (Usa el dominio definido en .env, por defecto localhost)
+{$DOMAIN_NAME:localhost} {
+    # Proxy para el Frontend (Streamlit/Vite)
+    reverse_proxy frontend:8501
+
+    # Proxy para la API (FastAPI)
+    # Todas las rutas que empiezan con /api o /docs se envían al backend
+    handle_path /api/* {
+        reverse_proxy app:8000
+    }
+
+    handle_path /docs* {
+        reverse_proxy app:8000
+    }
+
+    handle_path /openapi.json* {
+        reverse_proxy app:8000
+    }
+
+    # Optimización de logs
+    log {
+        output file /data/access.log
+    }
+
+    # Habilitar compresión Gzip/Zstd
+    encode zstd gzip
+}
