@@ -1,208 +1,154 @@
-# Configuración del Agente (opencode)
+# AGENTS.md
+Guide for autonomous coding agents working in `DataSciencie_Facial/`.
 
-## Comandos de Ejecución
+## Project Snapshot
+- Backend: `app/` (FastAPI, SQLAlchemy, Pydantic v2)
+- Frontend: `frontend/` (React 19, Vite, ESLint)
+- Vision modules: `backend/vision/`
+- DB scripts: `scriptsDB/`
+- Infra: `docker-compose.yml`, `Dockerfile.app`, `frontend/Dockerfile`
+- API docs (running): `http://localhost:8000/docs`
 
-### Iniciar todos los servicios
-```bash
-docker compose up -d
-```
+## Existing Repository Rules (must keep)
+1. New/changed code should include explanatory comments about purpose/justification.
+2. New Markdown docs must go in `Documentacion/`, except `AGENTS.md` and `README.md`.
 
-### Detener todos los servicios
-```bash
-docker compose down
-```
+## Cursor/Copilot Rules Status
+No extra agent-rule files found during analysis:
+- `.cursorrules` not found
+- `.cursor/rules/` not found
+- `.github/copilot-instructions.md` not found
+If added later, treat them as authoritative and update this file.
 
-### Iniciar servicios específicos
-```bash
-# Solo backend
-docker compose up -d app
+## Setup, Build, and Run Commands
+Run from repo root (`DataSciencie_Facial/`) unless noted.
 
-# Solo frontend
-docker compose up -d frontend
-
-# Solo base de datos
-docker compose up -d db
-
-# Backend + Frontend (sin DB)
-docker compose up -d app frontend
-
-# Backend + DB (sin Frontend)
-docker compose up -d app db
-```
-
-### Detener servicios específicos
-```bash
-# Detener backend
-docker compose stop app
-
-# Detener frontend
-docker compose stop frontend
-
-# Detener base de datos
-docker compose stop db
-
-# Detener backend + frontend
-docker compose stop app frontend
-```
-
-### Reiniciar servicios
-```bash
-# Reiniciar todos
-docker compose restart
-
-# Reiniciar servicio específico
-docker compose restart app
-docker compose restart frontend
-```
-
-### Ver logs
-```bash
-# Logs de un servicio
-docker compose logs -f app
-docker compose logs -f frontend
-
-# Logs de todos los servicios
-docker compose logs -f
-```
-
-### Reconstruir contenedores
-```bash
-docker compose up -d --build
-```
-
-## Servicios
-
-| Servicio | Puerto | Descripción |
-|----------|--------|-------------|
-| app      | 8000   | FastAPI (Backend) |
-| frontend | 8501   | Streamlit (Dashboard) |
-| db       | 5433   | PostgreSQL (externo) / 5432 (interno) |
-
-## URLs
-
-- **API Docs**: http://localhost:8000/docs
-- **Frontend**: http://localhost:8501
-
-## Variables de Entorno
-
-Copiar `.env.example` a `.env` y configurar:
+### Full stack (Docker, recommended)
 ```bash
 cp .env.example .env
+docker compose up -d --build
+docker compose ps
 ```
 
-## Comandos de Desarrollo
-
-### Requisitos Previos
-1. Docker debe estar corriendo: `docker compose ps`
-2. Si Docker está detenido, iniciar primero: `docker compose up -d`
-
-### Backend (FastAPI con Uvicorn)
-
-**Opción 1: Con Docker (recomendado)**
+### Common service control
 ```bash
-# Iniciar servicio
-docker compose up -d app
-
-# Ver logs en tiempo real
-docker compose logs -f app
-
-# Detener servicio
-docker compose stop app
-
-# Reiniciar servicio
+docker compose up -d app frontend db
+docker compose stop app frontend db
+docker compose down
 docker compose restart app
-
-# Acceder al contenedor
-docker compose exec app bash
 ```
 
-**Opción 2: Directamente en máquina (sin Docker)**
+### Logs
 ```bash
-# Instalar dependencias
-cd app
-pip install -r requirements.txt
-
-# Iniciar servidor Uvicorn
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-
-# El servidor estará disponible en: http://localhost:8000
-# API Docs en: http://localhost:8000/docs
-```
-
-### Frontend (Streamlit)
-
-**Opción 1: Con Docker (recomendado)**
-```bash
-# Iniciar servicio
-docker compose up -d frontend
-
-# Ver logs en tiempo real
+docker compose logs -f app
 docker compose logs -f frontend
-
-# Detener servicio
-docker compose stop frontend
-
-# Reiniciar servicio
-docker compose restart frontend
-
-# Acceder al contenedor
-docker compose exec frontend bash
+docker compose logs -f db
 ```
 
-**Opción 2: Directamente en máquina (sin Docker)**
+### Backend local run (without Docker)
 ```bash
-# Instalar dependencias
+python -m venv .venv
+source .venv/bin/activate
+pip install -r app/requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+### Frontend local run (without Docker)
+```bash
 cd frontend
-pip install -r requirements.txt
-
-# Iniciar Streamlit
-streamlit run app.py
-
-# El dashboard estará disponible en: http://localhost:8501
+npm install
+npm run dev -- --host 0.0.0.0 --port 8501
 ```
 
-### Base de Datos (PostgreSQL)
-
-**Opción 1: Con Docker**
+### Frontend production build
 ```bash
-# Iniciar servicio
-docker compose up -d db
+cd frontend
+npm run build
+npm run preview
+```
 
-# Conectar a PostgreSQL
+### Database helpers
+```bash
 docker compose exec db psql -U facial_user -d facial_db
-
-# Ver tablas
 docker compose exec db psql -U facial_user -d facial_db -c "\dt"
-
-# Ejecutar script SQL
 docker compose exec -T db psql -U facial_user -d facial_db < scriptsDB/init_db.sql
 ```
 
-## Base de Datos
+## Lint and Test Commands
 
-### Conectar a PostgreSQL
+### Frontend lint (configured)
 ```bash
-docker compose exec db psql -U facial_user -d facial_db
+cd frontend
+npm run lint
 ```
 
-### Ver tablas
+### Backend lint (not configured yet)
+No Python linter command is defined in the repository.
+If you add one, prefer `ruff` and document exact command here.
+
+### Test status (current repository)
+- No automated tests are currently configured in scripts/tooling.
+- No committed files match common test patterns.
+
+### Running a single test (important)
+Current state: not directly possible because no test framework is wired.
+
+When backend `pytest` is introduced:
 ```bash
-docker compose exec db psql -U facial_user -d facial_db -c "\dt"
+pytest path/to/test_file.py::test_case_name -q
 ```
 
-## Comandos útiles Docker
-
+When frontend `vitest` is introduced:
 ```bash
-# Ver estado de contenedores
-docker compose ps
-
-# Ver recursos
-docker stats
-
-# Limpiar recursos no usados
-docker system prune
+npm run test -- src/path/to/file.test.jsx -t "test name"
 ```
 
-## Reglas de Desarrollo
-- **Comentarios Obligatorios**: Todo cambio o inserción de nuevo código DEBE incluir un comentario explicativo que indique la justificación del cambio o la función del código nuevo añadido en el sistema.
-- **Documentación Ordenada**: Toda documentación en formato `.md` que se cree en el proyecto, **exceptuando `AGENTS.md` y `README.md`**, DEBE ser ubicada dentro de la carpeta `Documentacion/` en la raíz del proyecto. Esto incluye guías, endpoints, changelogs, documentación técnica, etc. El objetivo es mantener un orden centralizado de toda la documentación del sistema.
+## Code Style Guidelines
+Follow existing style in edited files; keep diffs focused and minimal.
+
+### Python (FastAPI backend)
+1. Imports grouped in this order: stdlib, third-party, local `app.*` modules.
+2. Naming: `snake_case` for functions/vars, `PascalCase` for classes/models/schemas.
+3. Type hints on public function signatures and schema fields are preferred.
+4. Keep route handlers small; move reusable logic to core/service modules.
+5. Raise `HTTPException` with explicit status codes and safe messages.
+6. DB writes should follow `add` -> `commit` -> `refresh` patterns when needed.
+7. Use Pydantic models for request/response; avoid leaking ORM-only structures.
+8. Keep auth logic centralized (`app/core/security.py`) and dependency-driven.
+9. Never hardcode secrets; use env vars (`JWT_SECRET_KEY`, DB/SMTP settings).
+10. Keep camera/network code defensive (`try/except`, clear failure payloads).
+
+### JavaScript/React (frontend)
+1. Use functional components and React hooks.
+2. Component files use `PascalCase.jsx`; utilities live in `src/utils/`.
+3. Match existing formatting: 2 spaces, single quotes, no semicolons.
+4. Respect ESLint config in `frontend/eslint.config.js`.
+5. Remove unused vars unless intentionally ignored by lint naming patterns.
+6. Keep auth/API helper logic centralized (see `src/utils/api.js`).
+7. Use explicit loading/error state for async requests.
+8. Prefer readable, explicit page state over premature abstraction.
+
+### Imports and module boundaries
+1. Backend: prefer `from app...` absolute-local imports.
+2. Frontend: prefer relative imports within `src/`.
+3. Avoid circular dependencies between API routers and processing modules.
+4. Keep side effects out of module import-time when possible.
+
+### Formatting and documentation behavior
+1. Keep comments meaningful and consistent with nearby language (often Spanish).
+2. Avoid broad reformatting of unrelated lines/files.
+3. Do not commit generated artifacts unless explicitly required.
+4. Preserve API route naming conventions and schema naming patterns.
+
+### Naming conventions to preserve
+1. API resource routes are plural (`/api/users`, `/api/cameras`, `/api/detections`).
+2. SQLAlchemy model classes are singular (`User`, `Camera`, `Detection`).
+3. Pydantic schemas are intent-specific (`UserCreate`, `UserResponse`, etc.).
+4. Booleans should read clearly (`is_active`, `is_2fa_enabled`, etc.).
+
+## Agent Workflow Checklist
+1. Read related router + schema + model before editing behavior.
+2. Make smallest safe change that solves the task.
+3. Run relevant checks (at minimum frontend lint for frontend changes).
+4. If no tests exist, include concise manual verification steps in your handoff.
+5. Update this file when commands, rules, or tooling evolve.
