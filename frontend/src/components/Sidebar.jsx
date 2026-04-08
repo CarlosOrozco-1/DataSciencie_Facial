@@ -1,62 +1,86 @@
-import { Camera, Settings, Activity, LogOut, Users, LayoutDashboard } from 'lucide-react'
+import { useState } from 'react'
+import { Camera, Settings, Activity, LogOut, Users, LayoutDashboard, Menu } from 'lucide-react'
 
 // Componente Sidebar con navegación, módulo de usuarios y botón de cierre de sesión JWT
 export default function Sidebar({ currentPage, setCurrentPage, onLogout }) {
+
+  // Hook para manejar el estado del sidebar
+  const [isCollapsed, setIsCollapsed] = useState(false)
   return (
-    <aside className="sidebar">
-      <div className="brand-title">
-        <Activity size={28} />
-        GenderSense
+    // Se agrega dinamicamente la clase CSS 'collapsed' para colapsar el sidebar
+    <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
+
+      <div className="brand-title flex-between">
+        {/* Envolvemos todo el logo para que desaparezca al colapsar */}
+        {!isCollapsed && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <Activity size={28} />
+            <span>GenderSense</span>
+          </div>
+        )}
+
+        {/* Botón para colapsar el sidebar */}
+        <button onClick={() => setIsCollapsed(!isCollapsed)} className="collapse-btn">
+          <Menu size={24} color="var(--text-secondary)" />
+        </button>
       </div>
-      
+
+
       <nav>
-        <button 
+        <button
           onClick={() => setCurrentPage('dashboard')}
           className={`nav-link ${currentPage === 'dashboard' ? 'active' : ''}`}
+          title={isCollapsed ? 'Dashboard' : ''} // Tooltip para el botón de dashboard
         >
-          <LayoutDashboard size={20} />
-          Dashboard
+          <LayoutDashboard size={20} style={{ minWidth: '20px' }} />
+          {!isCollapsed && <span>Dashboard</span>}
         </button>
 
-        <button 
+        <button
           onClick={() => setCurrentPage('live')}
           className={`nav-link ${currentPage === 'live' ? 'active' : ''}`}
+          title={isCollapsed ? 'Vista en Vivo' : ''}
         >
-          <Camera size={20} />
-          Vista en Vivo
-        </button>
-        
-        <button 
-          onClick={() => setCurrentPage('manager')}
-          className={`nav-link ${currentPage === 'manager' ? 'active' : ''}`}
-        >
-          <Settings size={20} />
-          Gestión de Cámaras
+          <Camera size={20} style={{ minWidth: '20px' }} />
+          {!isCollapsed && <span>Vista en Vivo</span>}
         </button>
 
-        <button 
+        <button
+          onClick={() => setCurrentPage('manager')}
+          className={`nav-link ${currentPage === 'manager' ? 'active' : ''}`}
+          title={isCollapsed ? 'Gestión de Cámaras' : ''}
+        >
+          <Settings size={20} style={{ minWidth: '20px' }} />
+          {!isCollapsed && <span>Gestión de Cámaras</span>}
+        </button>
+
+        <button
           onClick={() => setCurrentPage('users')}
           className={`nav-link ${currentPage === 'users' ? 'active' : ''}`}
+          title={isCollapsed ? 'Gestión de Usuarios' : ''}
         >
-          <Users size={20} />
-          Gestión de Usuarios
+          <Users size={20} style={{ minWidth: '20px' }} />
+          {!isCollapsed && <span>Gestión de Usuarios</span>}
         </button>
       </nav>
-      
+
       <div style={{ marginTop: 'auto' }}>
-        {/* Botón para cerrar sesión y eliminar token JWT */}
-        <button 
+        <button
           onClick={onLogout}
           className="nav-link"
           style={{ color: 'var(--danger)', width: '100%' }}
+          title="Cerrar Sesión"
         >
-          <LogOut size={20} />
-          Cerrar Sesión
+          <LogOut size={20} style={{ minWidth: '20px' }} />
+          {!isCollapsed && <span>Cerrar Sesión</span>}
         </button>
-        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '1rem' }}>
-          Sistema de Reconocimiento v2.0
-        </div>
+        {!isCollapsed && (
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '1rem', textAlign: 'center' }}>
+            GenderSense v2.0
+          </div>
+        )}
       </div>
+
     </aside>
   )
 }

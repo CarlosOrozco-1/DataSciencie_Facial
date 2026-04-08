@@ -6,7 +6,7 @@
   --border-subtle: #334155;
   --text-primary: #f8fafc;
   --text-secondary: #94a3b8;
-  
+
   --accent-primary: #38bdf8;
   --accent-secondary: #818cf8;
   --success: #10b981;
@@ -43,6 +43,12 @@ body {
   padding: 2rem 1.5rem;
   display: flex;
   flex-direction: column;
+  transition: width 0.3s ease;
+}
+
+.sidebar.collapsed {
+  width: 80px;
+  padding: 2rem 1rem;
 }
 
 .brand-title {
@@ -55,6 +61,31 @@ body {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.sidebar.collapsed .brand-title {
+  justify-content: center;
+}
+
+.collapse-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.collapse-btn:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+  transform: scale(1.1);
 }
 
 .nav-link {
@@ -75,6 +106,13 @@ body {
   text-align: left;
   font-family: inherit;
   font-size: 1rem;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.sidebar.collapsed .nav-link {
+  justify-content: center;
+  padding: 0.75rem;
 }
 
 .nav-link:hover {
@@ -217,7 +255,8 @@ body {
   align-items: center;
 }
 
-select, input {
+select,
+input {
   width: 100%;
   padding: 0.75rem 1rem;
   background-color: rgba(15, 23, 42, 0.5);
@@ -230,7 +269,8 @@ select, input {
   transition: border-color 0.2s ease;
 }
 
-select:focus, input:focus {
+select:focus,
+input:focus {
   outline: none;
   border-color: var(--accent-primary);
   box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
@@ -352,6 +392,7 @@ select:focus, input:focus {
   font-size: 0.75rem;
   margin-top: 1.5rem;
 }
+
 /* ==================== Dashboard Styles ==================== */
 .dashboard-grid {
   display: grid;
@@ -395,12 +436,14 @@ select:focus, input:focus {
 
 .silhouette-male {
   -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm9 7h-6v13h-2v-6h-2v6H9V9H3V7h18v2z"/></svg>');
-  mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm9 7h-6v13h-2v-6h-2v6H9V9H3V7h18v2z"/></svg>'); /*Silueta de hombre*/
+  mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm9 7h-6v13h-2v-6h-2v6H9V9H3V7h18v2z"/></svg>');
+  /*Silueta de hombre*/
 }
 
 .silhouette-female {
   -webkit-mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zM9 22v-4H7l2.1-6.4C9.5 10.4 10.5 9 12 9s2.5 1.4 2.9 2.6L17 18h-2v4H9z"/></svg>');
-  mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zM9 22v-4H7l2.1-6.4C9.5 10.4 10.5 9 12 9s2.5 1.4 2.9 2.6L17 18h-2v4H9z"/></svg>'); /*Silueta de mujer*/
+  mask-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zM9 22v-4H7l2.1-6.4C9.5 10.4 10.5 9 12 9s2.5 1.4 2.9 2.6L17 18h-2v4H9z"/></svg>');
+  /*Silueta de mujer*/
 }
 
 .liquid-fill {
@@ -425,8 +468,13 @@ select:focus, input:focus {
 }
 
 @keyframes wave {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
 }
 
 .chart-container {
