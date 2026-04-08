@@ -1,0 +1,496 @@
+{
+  "info": {
+    "name": "GenderSense - Facial Recognition API",
+    "description": "API completa con autenticación JWT para el sistema de reconocimiento facial GenderSense",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://gendersense.duckdns.org"
+    },
+    {
+      "key": "jwt_token",
+      "value": "",
+      "description": "Token JWT. Se llena automáticamente al hacer Login."
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "🏥 Sistema",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{base_url}}/health"
+          }
+        },
+        {
+          "name": "Root Info",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{base_url}}/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔐 Autenticación",
+      "item": [
+        {
+          "name": "Login (Username)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Auto-guardar token JWT tras login exitoso",
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('jwt_token', jsonData.access_token);",
+                  "    console.log('✅ Token JWT guardado automáticamente');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "username", "value": "admin", "description": "Username o email" },
+                { "key": "password", "value": "password123" }
+              ]
+            },
+            "url": "{{base_url}}/api/auth/login"
+          }
+        },
+        {
+          "name": "Login (Email)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('jwt_token', jsonData.access_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "username", "value": "admin@generosense.com" },
+                { "key": "password", "value": "password123" }
+              ]
+            },
+            "url": "{{base_url}}/api/auth/login"
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@generosense.com\"\n}"
+            },
+            "url": "{{base_url}}/api/auth/forgot-password"
+          }
+        },
+        {
+          "name": "Reset Password (con token)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"PEGAR_TOKEN_DEL_EMAIL_AQUI\",\n  \"new_password\": \"nueva_clave_123\"\n}"
+            },
+            "url": "{{base_url}}/api/auth/reset-password"
+          }
+        },
+        {
+          "name": "2FA - Setup (Generar QR)",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/auth/2fa/setup"
+          }
+        },
+        {
+          "name": "2FA - Verify (Activar)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"123456\"\n}"
+            },
+            "url": "{{base_url}}/api/auth/2fa/verify"
+          }
+        },
+        {
+          "name": "2FA - Validate (Login paso 2)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"temp_token\": \"PEGAR_TEMP_TOKEN_AQUI\",\n  \"code\": \"123456\"\n}"
+            },
+            "url": "{{base_url}}/api/auth/2fa/validate"
+          }
+        },
+        {
+          "name": "2FA - Disable",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/auth/2fa/disable"
+          }
+        }
+      ]
+    },
+    {
+      "name": "👥 Usuarios",
+      "item": [
+        {
+          "name": "Listar Usuarios",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/users/"
+          }
+        },
+        {
+          "name": "Mi Perfil",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/users/me"
+          }
+        },
+        {
+          "name": "Obtener Usuario por ID",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/users/1"
+          }
+        },
+        {
+          "name": "Crear Usuario",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"operador1\",\n  \"email\": \"operador@empresa.com\",\n  \"password\": \"clave123\"\n}"
+            },
+            "url": "{{base_url}}/api/users/"
+          }
+        },
+        {
+          "name": "Actualizar Usuario",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"operador_editado\",\n  \"email\": \"nuevo@email.com\"\n}"
+            },
+            "url": "{{base_url}}/api/users/2"
+          }
+        },
+        {
+          "name": "Resetear Contraseña (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"new_password\": \"nueva_clave_segura\"\n}"
+            },
+            "url": "{{base_url}}/api/users/2/reset-password"
+          }
+        },
+        {
+          "name": "Cambiar Mi Contraseña",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"current_password\": \"password123\",\n  \"new_password\": \"nueva_clave\"\n}"
+            },
+            "url": "{{base_url}}/api/users/me/change-password"
+          }
+        },
+        {
+          "name": "Eliminar Usuario",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/users/2"
+          }
+        }
+      ]
+    },
+    {
+      "name": "📷 Cámaras",
+      "item": [
+        {
+          "name": "Listar Cámaras",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/cameras/"
+          }
+        },
+        {
+          "name": "Obtener Cámara",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/cameras/1"
+          }
+        },
+        {
+          "name": "Crear Cámara (USB)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Webcam Principal\",\n  \"url\": \"0\",\n  \"location\": \"Escritorio\"\n}"
+            },
+            "url": "{{base_url}}/api/cameras/"
+          }
+        },
+        {
+          "name": "Crear Cámara (RTSP)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Cámara Exterior\",\n  \"url\": \"rtsp://admin:pass@192.168.10.100:554/stream1\",\n  \"location\": \"Entrada Principal\"\n}"
+            },
+            "url": "{{base_url}}/api/cameras/"
+          }
+        },
+        {
+          "name": "Actualizar Cámara",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Cámara Renombrada\",\n  \"location\": \"Nueva Ubicación\"\n}"
+            },
+            "url": "{{base_url}}/api/cameras/1"
+          }
+        },
+        {
+          "name": "Estado de Cámara",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/cameras/1/status"
+          }
+        },
+        {
+          "name": "Probar Conexión",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/cameras/1/test"
+          }
+        },
+        {
+          "name": "Eliminar Cámara",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/api/cameras/1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔍 Detecciones",
+      "item": [
+        {
+          "name": "Listar Detecciones",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/detections/?camera_id=7&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "detections", ""],
+              "query": [
+                { "key": "camera_id", "value": "7" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Estadísticas Globales",
+          "request": {
+            "description": "Retorna totales de género y un arreglo 'history' con las detecciones de las últimas 24 horas agrupadas por hora.",
+            "method": "GET",
+            "url": "{{base_url}}/api/detections/stats"
+          }
+        },
+        {
+          "name": "Estadísticas por Cámara",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/detections/stats?camera_id=7",
+              "host": ["{{base_url}}"],
+              "path": ["api", "detections", "stats"],
+              "query": [
+                { "key": "camera_id", "value": "7" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Crear Detección Manual",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"camera_id\": 7,\n  \"gender\": \"male\",\n  \"confidence\": 0.95\n}"
+            },
+            "url": "{{base_url}}/api/detections/"
+          }
+        },
+        {
+          "name": "Analizar Frame (Base64)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"image_base64\": \"data:image/jpeg;base64,...\",\n  \"camera_id\": 7\n}"
+            },
+            "url": "{{base_url}}/api/detections/analyze_frame"
+          }
+        }
+      ]
+    },
+    {
+      "name": "⚙️ Procesamiento",
+      "item": [
+        {
+          "name": "Iniciar Procesamiento",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/processing/start/1"
+          }
+        },
+        {
+          "name": "Detener Procesamiento",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/api/processing/stop/1"
+          }
+        },
+        {
+          "name": "Estado Global",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/processing/status"
+          }
+        },
+        {
+          "name": "Estado por Cámara",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/processing/status/1"
+          }
+        },
+        {
+          "name": "Frame Actual (JPEG)",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/processing/frame/1"
+          }
+        },
+        {
+          "name": "Video Feed (MJPEG Stream)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/processing/video_feed/1?token={{jwt_token}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "processing", "video_feed", "1"],
+              "query": [
+                { "key": "token", "value": "{{jwt_token}}" }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
