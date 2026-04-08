@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-const API_URL = 'http://localhost:8000'
+import { API_URL } from '../utils/api'
 
 // Página para solicitar recuperación de contraseña por email
 export default function ForgotPassword({ onNavigate }) {

@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 // Login con soporte para 2FA y recuperación de contraseña
 // Flujo: username+password → si 2FA activo → mostrar campo de código 6 dígitos
-const API_URL = 'http://localhost:8000'
+import { API_URL } from '../utils/api'
 
 export default function Login({ onLogin, onNavigate }) {
   const [username, setUsername] = useState('')

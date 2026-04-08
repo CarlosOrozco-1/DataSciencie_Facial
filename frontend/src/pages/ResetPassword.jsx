@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-const API_URL = 'http://localhost:8000'
+import { API_URL } from '../utils/api'
 
 // Página para establecer nueva contraseña usando el token de recuperación
 // El token llega como query param en la URL: ?reset_token=xyz
