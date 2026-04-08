@@ -82,3 +82,11 @@ docker compose logs caddy
 ### D. Directiva de Manejo Recortador en Caddyfile
 * **Problema:** La ruta y la base final del login regresaba un error backend de Status `404 Not Found`. El ruteador `Caddyfile` usaba `handle_path /api/*`. Las directivas de la familia `handle_path` tienen el peculiar comportamiento de recortar por detrás la coincidencia entregada. En lugar de procesar `/api/auth/login`, procesaba como `/auth/login`. Como FastAPI fue agnóstico de esto, denegaba la vía.
 * **Solución:** Se reemplazó el mandato `handle_path` por un estricto `handle` explícito dentro de `Caddyfile` para mantener las concordancias de API.
+
+### E. Prompt Interactivo bloqueante en Emuladores (Podman)
+* **Problema:** Al levantar los contenedores localmente en un sistema basado en Linux (Fedora/RHEL), Podman pausaba la construcción y lanzaba la pregunta `? Please select an image:`. Esto estancaba la terminal porque Podman no sabe de qué registro por defecto bajar imágenes que no están calificadas.
+* **Solución:** Se especificó explícitamente en el `docker-compose.yml` que la imagen de caddy apuntara a `docker.io/library/caddy:2-alpine`.
+
+### F. Denegación de Permisos de Puertos Nativos (Local)
+* **Problema:** El entorno arrojó `bind: permission denied` en el puerto `80` por causa de que los puertos inferiores a `1024` requieren privilegios de Root (los cuales sí tiene el Docker daemon en el servidor de Producción, pero en local Podman correo en moto "rootless").
+* **Solución:** Se autorizó temporalmente al sistema operativo local a abrir puertos HTTP modificando el `sysctl` usando el comando `sudo sysctl -w net.ipv4.ip_unprivileged_port_start=80`.
