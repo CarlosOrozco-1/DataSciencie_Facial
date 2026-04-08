@@ -10,15 +10,15 @@
 
     # Proxy para la API (FastAPI)
     # Todas las rutas que empiezan con /api o /docs se envían al backend
-    handle_path /api/* {
+    handle /api/* {
         reverse_proxy app:8000
     }
 
-    handle_path /docs* {
+    handle /docs* {
         reverse_proxy app:8000
     }
 
-    handle_path /openapi.json* {
+    handle /openapi.json* {
         reverse_proxy app:8000
     }
 
