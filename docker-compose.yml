@@ -68,7 +68,7 @@ services:
     command: npm run dev -- --host 0.0.0.0 --port 8501
 
   caddy:
-    image: caddy:2-alpine # Proxy inverso para gestionar certificados SSL
+    image: docker.io/library/caddy:2-alpine # Proxy inverso para gestionar certificados SSL
     restart: unless-stopped
     ports:
       - "80:80"
