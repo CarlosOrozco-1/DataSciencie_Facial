@@ -156,3 +156,12 @@ def get_current_user(token: str = Depends(get_token_from_request), db: Session =
     if user is None:
         raise credentials_exception
     return user
+
+def get_current_admin_user(current_user: User = Depends(get_current_user)):
+    """Verifica si el usuario actual tiene privilegios de administrador"""
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tus privilegios no son suficientes para acceder a este módulo."
+        )
+    return current_user

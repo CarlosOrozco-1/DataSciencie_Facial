@@ -53,15 +53,29 @@ export default function Sidebar({ currentPage, setCurrentPage, onLogout }) {
           <Settings size={20} style={{ minWidth: '20px' }} />
           {!isCollapsed && <span>Gestión de Cámaras</span>}
         </button>
-
-        <button
-          onClick={() => setCurrentPage('users')}
-          className={`nav-link ${currentPage === 'users' ? 'active' : ''}`}
-          title={isCollapsed ? 'Gestión de Usuarios' : ''}
-        >
-          <Users size={20} style={{ minWidth: '20px' }} />
-          {!isCollapsed && <span>Gestión de Usuarios</span>}
-        </button>
+        {/* Solo renderizar Gestión de Usuarios si el token (is_admin) lo permite */}
+        {(() => {
+          try {
+            const token = localStorage.getItem('token')
+            if (!token) return null
+            const payload = JSON.parse(atob(token.split('.')[1]))
+            if (payload.is_admin) {
+              return (
+                <button
+                  onClick={() => setCurrentPage('users')}
+                  className={`nav-link ${currentPage === 'users' ? 'active' : ''}`}
+                  title={isCollapsed ? 'Gestión de Usuarios' : ''}
+                >
+                  <Users size={20} style={{ minWidth: '20px' }} />
+                  {!isCollapsed && <span>Gestión de Usuarios</span>}
+                </button>
+              )
+            }
+          } catch {
+            return null
+          }
+          return null
+        })()}
 
         <button
           onClick={() => setCurrentPage('user-profile')}

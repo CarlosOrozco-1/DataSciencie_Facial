@@ -6,6 +6,7 @@ from datetime import datetime
 class UserBase(BaseModel):
     username: str
     email: EmailStr
+    is_admin: bool = False
 
 # Schema para crear usuario (requiere contraseña en texto plano)
 class UserCreate(UserBase):
@@ -16,6 +17,7 @@ class UserUpdate(BaseModel):
     username: Optional[str] = None
     email: Optional[EmailStr] = None
     is_active: Optional[bool] = None
+    is_admin: Optional[bool] = None
 
 # Schema para que un admin resetee la contraseña de otro usuario
 class UserResetPassword(BaseModel):

@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard'
 import Login from './pages/Login'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
+import UserProfile from './pages/UserProfile'
 import './index.css'
 
 // Componente raíz con control de autenticación JWT y rutas de recuperación.
@@ -20,7 +21,7 @@ function App() {
   useEffect(() => {
     const storedToken = localStorage.getItem('token')
     if (storedToken) setToken(storedToken)
-    
+
     // Detectar token de reset en la URL (llegó por email)
     const params = new URLSearchParams(window.location.search)
     const urlResetToken = params.get('reset_token')
@@ -67,6 +68,7 @@ function App() {
       case 'live': return <LiveView />
       case 'manager': return <CameraManager />
       case 'users': return <UserManager />
+      case 'user-profile': return <UserProfile />
       default: return <Dashboard />
     }
   }
