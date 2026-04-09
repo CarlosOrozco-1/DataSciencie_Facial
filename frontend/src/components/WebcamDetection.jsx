@@ -26,9 +26,15 @@ export function WebcamDetection({ onDetection, isDetecting, cameraId = 1, device
         setCameraError(null);
       } catch (innerErr) {
         if (innerErr.name === 'OverconstrainedError' || innerErr.name === 'NotReadableError') {
-          console.warn("No se pudo usar la cámara exacta (OverconstrainedError).");
-          setCameraError("La cámara seleccionada no está conectada o está apagada. Por favor seleccione otra cámara desde el menú desplegable.");
-          return; // Detenemos aquí en lugar de cambiar la cámara por debajo de la mesa
+          console.warn("No se pudo usar la cámara exacta (DeviceID cambió o espiró). Intentando fallback a cámara por defecto...");
+          try {
+            // Reintento: usar la primera cámara disponible en lugar de tirar error estricto
+            stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            setCameraError(null);
+          } catch (fallbackErr) {
+            setCameraError("La cámara seleccionada no está conectada o está ocupada y no se encontró otra cámara de respaldo.");
+            return;
+          }
         } else {
           throw innerErr;
         }
