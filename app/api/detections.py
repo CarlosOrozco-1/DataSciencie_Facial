@@ -82,12 +82,29 @@ def get_stats(
         for h in history_data
     ]
     
+    # Calcular tendencia de flujo de personas
+    last_1h = datetime.utcnow() - timedelta(hours=1)
+    last_2h = datetime.utcnow() - timedelta(hours=2)
+    last_hour_count = query.filter(Detection.timestamp >= last_1h).count()
+    prev_hour_count = query.filter(Detection.timestamp >= last_2h, Detection.timestamp < last_1h).count()
+    
+    # Diferencia acotada: (Actual - Previo) / Max(Actual, Previo) * 100
+    # Esto mantiene los porcentajes estrictamente entre -100% y +100%
+    difference = last_hour_count - prev_hour_count
+    denominator = max(last_hour_count, prev_hour_count)
+    
+    if denominator > 0:
+        flow_trend = (difference / denominator) * 100.0
+    else:
+        flow_trend = 0.0
+    
     return DetectionStats(
         total_detections=total,
         male_count=male_count,
         female_count=female_count,
         avg_confidence=round(avg_conf, 2),
-        history=history_list
+        history=history_list,
+        flow_trend=round(flow_trend, 1)
     )
 
 @router.post("/", response_model=DetectionResponse)

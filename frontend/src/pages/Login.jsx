@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Eye, EyeOff } from 'lucide-react' //importacion para icono de ojito
 
 // Login con soporte para 2FA y recuperación de contraseña
 // Flujo: username+password → si 2FA activo → mostrar campo de código 6 dígitos
@@ -9,7 +10,8 @@ export default function Login({ onLogin, onNavigate }) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  
+  const [showPassword, setShowPassword] = useState(false)
+
   // Estado para 2FA segundo paso
   const [requires2FA, setRequires2FA] = useState(false)
   const [tempToken, setTempToken] = useState('')
@@ -33,7 +35,7 @@ export default function Login({ onLogin, onNavigate }) {
 
       if (res.ok) {
         const data = await res.json()
-        
+
         // Si el backend indica que necesita 2FA, mostrar segundo paso
         if (data.requires_2fa) {
           setRequires2FA(true)
@@ -107,11 +109,27 @@ export default function Login({ onLogin, onNavigate }) {
 
             <div className="form-group">
               <label htmlFor="password">Contraseña</label>
-              <input
-                id="password" type="password" placeholder="••••••••"
-                value={password} onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+              <div style={{ position: 'relative' }}>
+                <input
+                  id="password" type={showPassword ? "text" : "password"} placeholder="••••••••"
+                  value={password} onChange={(e) => setPassword(e.target.value)}
+                  required
+                  style={{ width: '100%', paddingRight: '2.5rem', boxSizing: 'border-box', marginBottom: 0 }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
+                    background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)',
+                    display: 'flex', alignItems: 'center', padding: 0
+                  }}
+                  title={showPassword ? "Ocultar Contraseña" : "Mostrar Contraseña"}
+                  tabIndex="-1"
+                >
+                  {showPassword ? <EyeOff size={22} /> : <Eye size={22} />}
+                </button>
+              </div>
             </div>
 
             {error && <div className="login-error">⚠️ {error}</div>}
@@ -121,7 +139,7 @@ export default function Login({ onLogin, onNavigate }) {
             </button>
 
             {/* Enlace de recuperación de contraseña */}
-            <button type="button" onClick={() => onNavigate('forgot')} 
+            <button type="button" onClick={() => onNavigate('forgot')}
               style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', fontSize: '0.85rem', marginTop: '0.5rem', textDecoration: 'underline' }}>
               ¿Olvidaste tu contraseña?
             </button>

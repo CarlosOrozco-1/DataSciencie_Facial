@@ -28,6 +28,7 @@ class DetectionStats(BaseModel):
     female_count: int
     avg_confidence: float
     history: Optional[list[DetectionHistory]] = []
+    flow_trend: Optional[float] = 0.0
 
 class FrameAnalysisRequest(BaseModel):
     image_base64: str

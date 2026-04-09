@@ -133,7 +133,7 @@ def verify_totp_code(secret: str, code: str) -> bool:
     valid_window=1 permite un margen de ±30 segundos por desincronización de reloj.
     """
     totp = pyotp.TOTP(secret)
-    return totp.verify(code, valid_window=1)
+    return totp.verify(code, valid_window=0)
 
 # ======== Dependency de autenticación ========
 

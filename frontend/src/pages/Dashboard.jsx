@@ -250,9 +250,21 @@ export default function Dashboard() {
               )}
             </div>
 
+            {/* 
+              DOCUMENTACION: Análisis Dinámico de Flujo
+              Se calcula como una comparación entre la cantidad de detecciones en la última hora vs la hora anterior a esa.
+              Si el trend es > 0, significa subida. < 0 es bajada. 0 es estable.
+              Esta tarjeta provee feedback situacional en tiempo real al usuario de la plataforma.
+            */}
             <div className="card" style={{ marginTop: 'auto', backgroundColor: 'rgba(56, 189, 248, 0.05)', borderStyle: 'dashed' }}>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
-                💡 <strong>Análisis:</strong> El flujo de personas ha aumentado un 12% en la última hora.
+                💡 <strong>Análisis:</strong> El flujo de personas{' '}
+                {stats.flow_trend > 0 
+                  ? `ha aumentado un ${stats.flow_trend}%` 
+                  : stats.flow_trend < 0 
+                    ? `ha disminuido un ${Math.abs(stats.flow_trend)}%`
+                    : 'se mantiene estable o sin datos suficientes'}
+                {' '}en la última hora.
               </p>
             </div>
           </div>

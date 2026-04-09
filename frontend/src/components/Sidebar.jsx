@@ -99,7 +99,7 @@ export default function Sidebar({ currentPage, setCurrentPage, onLogout }) {
         </button>
         {!isCollapsed && (
           <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '1rem', textAlign: 'center' }}>
-            GenderSense v2.0
+            GenderSense v2.1.0
           </div>
         )}
       </div>
