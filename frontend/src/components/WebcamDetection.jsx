@@ -13,28 +13,40 @@ export function WebcamDetection({ onDetection, isDetecting, cameraId = 1, device
   const startCamera = async () => {
     stopCamera(); // Detener cualquier stream anterior
     try {
-      const videoConstraints = { width: 1280, height: 720 };
-      if (deviceId && deviceId.length > 5 && deviceId !== 'CUSTOM') {
-        videoConstraints.deviceId = { exact: deviceId };
-      } else {
-        videoConstraints.facingMode = 'user';
-      }
-      
       let stream;
       try {
+        const videoConstraints = { width: 1280, height: 720 };
+        
+        if (deviceId && deviceId !== 'CUSTOM') {
+          // Si el ID es un número simple "0", "1", "2" (estilo OpenCV)
+          if (!isNaN(deviceId) && deviceId.trim() !== '' && deviceId.length < 5) {
+            // Pedimos permiso temporal y rápido para asegurar que deviceId se revele
+            await navigator.mediaDevices.getUserMedia({ video: true }).then(s => s.getTracks().forEach(t => t.stop())).catch(e => console.error(e));
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const videoDevices = devices.filter(d => d.kind === 'videoinput');
+            const idx = parseInt(deviceId, 10);
+            
+            if (videoDevices[idx]) {
+              videoConstraints.deviceId = { exact: videoDevices[idx].deviceId };
+            } else {
+              throw { name: 'DeviceIndexError' }; // No existe tal índice
+            }
+          } else {
+            // Si es un Hash seguro autogenerado
+            videoConstraints.deviceId = { exact: deviceId };
+          }
+        } else {
+          videoConstraints.facingMode = 'user';
+        }
+
         stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints });
         setCameraError(null);
       } catch (innerErr) {
-        if (innerErr.name === 'OverconstrainedError' || innerErr.name === 'NotReadableError') {
-          console.warn("No se pudo usar la cámara exacta (DeviceID cambió o espiró). Intentando fallback a cámara por defecto...");
-          try {
-            // Reintento: usar la primera cámara disponible en lugar de tirar error estricto
-            stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            setCameraError(null);
-          } catch (fallbackErr) {
-            setCameraError("La cámara seleccionada no está conectada o está ocupada y no se encontró otra cámara de respaldo.");
-            return;
-          }
+        // ABOLIMOS el fallback automático. Si la cámara esperada no está, es mejor FALLAR que inyectar datos en la ID incorrecta.
+        if (innerErr.name === 'OverconstrainedError' || innerErr.name === 'NotReadableError' || innerErr.name === 'DeviceIndexError') {
+          console.warn("Dispositivo inalcanzable. Bloqueando streams cruzados para proteger los datos.");
+          setCameraError("Cámara inaccesible. Verifique la conexión física de esta cámara con ID " + (deviceId || 'por defecto') + ". La lectura de datos ha sido bloqueada por seguridad cruzada.");
+          return;
         } else {
           throw innerErr;
         }
