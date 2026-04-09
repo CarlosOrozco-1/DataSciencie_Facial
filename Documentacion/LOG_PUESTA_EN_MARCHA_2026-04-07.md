@@ -88,5 +88,9 @@ docker compose logs caddy
 * **Solución:** Se especificó explícitamente en el `docker-compose.yml` que la imagen de caddy apuntara a `docker.io/library/caddy:2-alpine`.
 
 ### F. Denegación de Permisos de Puertos Nativos (Local)
-* **Problema:** El entorno arrojó `bind: permission denied` en el puerto `80` por causa de que los puertos inferiores a `1024` requieren privilegios de Root (los cuales sí tiene el Docker daemon en el servidor de Producción, pero en local Podman correo en moto "rootless").
-* **Solución:** Se autorizó temporalmente al sistema operativo local a abrir puertos HTTP modificando el `sysctl` usando el comando `sudo sysctl -w net.ipv4.ip_unprivileged_port_start=80`.
+* **Problema:** El entorno arrojó `bind: permission denied` en el puerto `80` por causa de que los puertos inferiores a `1024` requieren privilegios de Root (los cuales sí tiene Docker en el servidor de Producción, pero en local Podman corre en modo "rootless").
+* **Solución Temporal (se borra al reiniciar):** Se autoriza al sistema operativo local a abrir puertos cambiando el límite en la memoria RAM:
+  `sudo sysctl -w net.ipv4.ip_unprivileged_port_start=80`
+* **Solución Permanente (Sobrevive reinicios):** Se guarda la regla como una configuración persistente en el kernel para que aplique siempre en la computadora sin importar la carpeta o proyecto:
+  1. `echo "net.ipv4.ip_unprivileged_port_start=80" | sudo tee /etc/sysctl.d/99-podman-ports.conf`
+  2. `sudo sysctl --system`
