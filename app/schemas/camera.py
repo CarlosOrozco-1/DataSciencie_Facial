@@ -9,6 +9,7 @@ class CameraBase(BaseModel):
     username: Optional[str] = None
     password: Optional[str] = None
     location: Optional[str] = None
+    hardware_label: Optional[str] = None
     status: str = "active"
     
     @field_validator('url')
@@ -18,18 +19,18 @@ class CameraBase(BaseModel):
         if not v:
             raise ValueError("URL no puede estar vacía")
         
-        # Permitir URLs RTSP, HTTP, HTTPS, índices numéricos o hashes de device ID del navegador
+        # Permitir URLs RTSP, HTTP, HTTPS, índices numéricos, hashes de device ID del navegador, o bandera LOCAL_USB
         valid_patterns = [
             r'^rtsp://.*',           # RTSP
             r'^https?://.*',         # HTTP/HTTPS
-            r'^\d+$',                # Índice de cámara local (0, 1, 2...)
-            r'^[a-zA-Z0-9_\-]+$',    # Device ID hash (browser devices)
+            r'^\d+$',                # Índice numérico (opcional manual)
+            r'^[a-zA-Z0-9_\-]+$',    # Device ID hash (retrocompatibilidad browser devices)
+            r'^LOCAL_USB$'           # Nueva bandera robusta para cámaras que usan hardware_label
         ]
         
         if not any(re.match(pattern, v) for pattern in valid_patterns):
             raise ValueError(
-                f"URL inválida: '{v}'. Debe ser RTSP (rtsp://...), HTTP (http://...), "
-                f"HTTPS (https://...) o un índice numérico (0, 1, 2...) para cámaras locales"
+                f"URL inválida: '{v}'. Debe ser RTSP, HTTP, HTTPS o 'LOCAL_USB' para dispositivos locales por hardware."
             )
         
         return v
@@ -52,6 +53,7 @@ class CameraUpdate(BaseModel):
     username: Optional[str] = None
     password: Optional[str] = None
     location: Optional[str] = None
+    hardware_label: Optional[str] = None
     status: Optional[str] = None
     
     @field_validator('url')
@@ -64,18 +66,18 @@ class CameraUpdate(BaseModel):
         if not v:
             raise ValueError("URL no puede estar vacía")
         
-        # Permitir URLs RTSP, HTTP, HTTPS, índices numéricos o hashes
+        # Permitir URLs RTSP, HTTP, HTTPS, índices numéricos, hashes o LOCAL_USB
         valid_patterns = [
             r'^rtsp://.*',
             r'^https?://.*',
             r'^\d+$',
             r'^[a-zA-Z0-9_\-]+$',
+            r'^LOCAL_USB$'
         ]
         
         if not any(re.match(pattern, v) for pattern in valid_patterns):
             raise ValueError(
-                f"URL inválida: '{v}'. Debe ser RTSP (rtsp://...), HTTP (http://...), "
-                f"HTTPS (https://...) o un índice numérico (0, 1, 2...) para cámaras locales"
+                f"URL inválida: '{v}'. Debe ser RTSP, HTTP, HTTPS o 'LOCAL_USB' para dispositivos locales."
             )
         
         return v

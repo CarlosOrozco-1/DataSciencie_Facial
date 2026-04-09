@@ -8,7 +8,7 @@ export default function CameraManager() {
   const [cameras, setCameras] = useState([])
   const [activeIds, setActiveIds] = useState([])
   
-  const [formData, setFormData] = useState({ name: '', location: '', url: '' })
+  const [formData, setFormData] = useState({ name: '', location: '', url: '', hardware_label: '' })
   const [loading, setLoading] = useState(true)
   const [localDevices, setLocalDevices] = useState([])
   const [cameraToDelete, setCameraToDelete] = useState(null)
@@ -43,7 +43,8 @@ export default function CameraManager() {
       const videoDevices = devices.filter(device => device.kind === 'videoinput')
       setLocalDevices(videoDevices)
       if (videoDevices.length > 0) {
-        setFormData(prev => ({...prev, url: videoDevices[0].deviceId}))
+        // En lugar de usar deviceId inseguro, usamos la nueva lógica normalizada:
+        setFormData(prev => ({...prev, url: 'LOCAL_USB', hardware_label: videoDevices[0].label || 'Dispositivo Desconocido'}))
       }
     } catch (err) {
       alert("No se pudo acceder a las cámaras. Verifique los permisos.")
@@ -58,7 +59,7 @@ export default function CameraManager() {
         body: JSON.stringify(formData)
       })
       if (res.ok) {
-        setFormData({ name: '', location: '', url: '' })
+        setFormData({ name: '', location: '', url: '', hardware_label: '' })
         fetchCameras()
       } else {
         alert("Error al añadir la cámara")
@@ -141,27 +142,37 @@ export default function CameraManager() {
           
           {localDevices.length > 0 ? (
             <select 
-              value={formData.url}
-              onChange={(e) => setFormData({...formData, url: e.target.value})}
+              value={formData.url === 'CUSTOM' ? 'CUSTOM' : (formData.hardware_label || formData.url)}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === 'CUSTOM') {
+                  setFormData({...formData, url: '', hardware_label: ''});
+                } else {
+                  setFormData({...formData, url: 'LOCAL_USB', hardware_label: val});
+                }
+              }}
               required
             >
               <option value="">Seleccione una cámara local...</option>
-              {localDevices.map((dev, i) => (
-                <option key={dev.deviceId} value={dev.deviceId}>
-                  {dev.label || `Cámara Desconocida ${i + 1}`}
-                </option>
-              ))}
+              {localDevices.map((dev, i) => {
+                const optValue = dev.label || `Cámara Desconocida ${i + 1}`;
+                return (
+                  <option key={dev.deviceId} value={optValue}>
+                    {optValue}
+                  </option>
+                );
+              })}
               <option value="CUSTOM">-- Ingresar URL manualmente --</option>
             </select>
           ) : null}
 
-          {(localDevices.length === 0 || formData.url === 'CUSTOM') && (
+          {(localDevices.length === 0 || !formData.hardware_label) && (formData.url !== 'LOCAL_USB') && (
             <input 
               type="text" 
               required 
-              placeholder="rtsp://... o ID"
+              placeholder="rtsp://... o ID web"
               value={formData.url === 'CUSTOM' ? '' : formData.url}
-              onChange={(e) => setFormData({...formData, url: e.target.value})}
+              onChange={(e) => setFormData({...formData, url: e.target.value, hardware_label: ''})}
             />
           )}
         </div>

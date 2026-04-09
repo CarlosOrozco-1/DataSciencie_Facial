@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Camera, CameraOff, Loader2, User, UserRound, AlertCircle } from 'lucide-react';
 import { authFetch, API_URL } from '../utils/api';
 
-export function WebcamDetection({ onDetection, isDetecting, cameraId = 1, deviceId }) {
+export function WebcamDetection({ onDetection, isDetecting, cameraId = 1, deviceId, hardwareLabel }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [hasPermission, setHasPermission] = useState(null);
@@ -17,9 +17,23 @@ export function WebcamDetection({ onDetection, isDetecting, cameraId = 1, device
       try {
         const videoConstraints = { width: 1280, height: 720 };
         
-        if (deviceId && deviceId !== 'CUSTOM') {
-          // Si el ID es un número simple "0", "1", "2" (estilo OpenCV)
-          if (!isNaN(deviceId) && deviceId.trim() !== '' && deviceId.length < 5) {
+        if (hardwareLabel || (deviceId && deviceId !== 'CUSTOM')) {
+          
+          if (hardwareLabel) {
+            // ======== NUEVO: MATCH POR HARDWARE LABEL (SEGURO/ESTABLE) ========
+            await navigator.mediaDevices.getUserMedia({ video: true }).then(s => s.getTracks().forEach(t => t.stop())).catch(e => console.error(e));
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const videoDevices = devices.filter(d => d.kind === 'videoinput');
+            const matchedDevice = videoDevices.find(d => d.label === hardwareLabel);
+            
+            if (matchedDevice && matchedDevice.deviceId) {
+              videoConstraints.deviceId = { exact: matchedDevice.deviceId };
+            } else {
+              throw { name: 'DeviceIndexError' }; // Dispositivo físico no encontrado
+            }
+          }
+          // Si el ID es un número simple "0", "1", "2" (estilo OpenCV retrocompatibilidad)
+          else if (!isNaN(deviceId) && deviceId.trim() !== '' && deviceId.length < 5) {
             // Pedimos permiso temporal y rápido para asegurar que deviceId se revele
             await navigator.mediaDevices.getUserMedia({ video: true }).then(s => s.getTracks().forEach(t => t.stop())).catch(e => console.error(e));
             const devices = await navigator.mediaDevices.enumerateDevices();
