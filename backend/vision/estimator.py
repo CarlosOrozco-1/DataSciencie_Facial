@@ -1,78 +1,63 @@
 import numpy as np
 import cv2
-from typing import Tuple, Optional
+import logging
 import os
 
 try:
-    import onnxruntime as ort
-    ONNXRUNTIME_AVAILABLE = True
+    from deepface import DeepFace
 except ImportError:
-    ONNXRUNTIME_AVAILABLE = False
+    DeepFace = None
+    logging.warning("DeepFace no detectado. Ejecute pip install deepface tf-keras torch torchvision")
 
 class GenderEstimator:
     """
-    Estimador de género usando OpenCV DNN Caffe y Liveness Detection
+    Estimador de género usando DeepFace (Opción B Integral)
+    Incluye MiniFASNet para Liveness Detection (Anti-Spoofing) Nativamente.
     """
     
     def __init__(self):
-        model_dir = os.path.join(os.path.dirname(__file__), "models")
-        prototxt = os.path.join(model_dir, "deploy_gender.prototxt")
-        weights = os.path.join(model_dir, "gender_net.caffemodel")
-        
-        if os.path.exists(prototxt) and os.path.exists(weights):
-            self.gender_net = cv2.dnn.readNetFromCaffe(prototxt, weights)
-        else:
-            self.gender_net = None
-            
         self.gender_list = ['male', 'female']
-        self.MODEL_MEAN_VALUES = (78.4263377603, 87.7689143744, 114.895847746)
         
     def check_liveness(self, face_roi: np.ndarray) -> bool:
         """
-        Anti-Spoofing heurístico ligero.
-        Evalúa el grado de desenfoque. Las fotos a través de pantallas o papel
-        suelen estar flat o fuera de foco microscópico relativo.
+        By-pass de la bandera, ya que DeepFace calculará el Liveness
+        y lo devolverá en el método estimate_gender simultáneamente.
         """
-        if face_roi is None or face_roi.size == 0:
-            return False
-            
-        gray = cv2.cvtColor(face_roi, cv2.COLOR_BGR2GRAY)
-        variance = cv2.Laplacian(gray, cv2.CV_64F).var()
-        
-        # Umbral heurístico ultra-estricto. Elevado de 75 a 120.0.
-        # Las pantallas modernas de celular renderizan píxeles extremadamente nítidos
-        # que llegan a romper el umbral de 75. 120 restringe el pase sólo a texturas vivas/ruidosas.
-        if variance < 120.0:
-            return False
-            
-        # Comprobar brillos extramadamente altos (reflejos de pantalla del celular a la webcam)
-        bright_pixels = np.sum(gray > 245)
-        total_pixels = gray.size
-        if (bright_pixels / total_pixels) > 0.05: # Si más del 5% del rostro es completamente blanco estallado
-            return False
-            
         return True
     
-    def estimate_gender(self, face_roi: np.ndarray) -> Tuple[str, float]:
+    def estimate_gender(self, face_roi: np.ndarray) -> tuple[str, float]:
         """
-        Estima el género usando ResNet Caffe desde el ROI extraído.
-        Retorna (género, confianza)
+        Estima el género y liveness usando DeepFace
         """
-        if face_roi is None or face_roi.size == 0 or self.gender_net is None:
+        if face_roi is None or face_roi.size == 0 or DeepFace is None:
             return "unknown", 0.0
         
         try:
-            blob = cv2.dnn.blobFromImage(face_roi, 1.0, (227, 227), self.MODEL_MEAN_VALUES, swapRB=False)
-            self.gender_net.setInput(blob)
-            preds = self.gender_net.forward()
+            # Llama a DeepFace para analizar (Anti-Spoofing en red neuronal MiniFASNet)
+            results = DeepFace.analyze(
+                img_path=face_roi, 
+                actions=['gender'], 
+                enforce_detection=False,
+                anti_spoofing=True 
+            )
             
-            # preds[0] -> probabilidad de [male, female] dependiendo del config del modelo de Levi & Hassner.
-            # En el modelo oficial de Levi: índice 0 es Male, índice 1 es Female.
-            gender_idx = preds[0].argmax()
-            gender = self.gender_list[gender_idx]
-            confidence = float(preds[0].max())
+            result = results[0]
+            
+            # Evaluación del Liveness de DeepFace
+            if not result.get('is_real', True):
+                return "spoof", 1.0
+
+            gender_obj = result.get('gender', {})
+            
+            # DeepFace estructura {'Man': 99.9, 'Woman': 0.1}
+            man_conf = gender_obj.get('Man', 0)
+            woman_conf = gender_obj.get('Woman', 0)
+            
+            is_male = man_conf > woman_conf
+            gender = "male" if is_male else "female"
+            confidence = max(man_conf, woman_conf) / 100.0
             
             return gender, confidence
         except Exception as e:
-            print(f"Error en estimación DNN de género: {e}")
+            logging.error(f"Error en estimación DeepFace: {e}")
             return "unknown", 0.0

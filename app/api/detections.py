@@ -149,6 +149,10 @@ def analyze_frame(request: FrameAnalysisRequest, db: Session = Depends(get_db)):
                     return {"gender": "spoof", "message": "Posible ataque detectado (Foto/Pantalla)"}
                 
                 gender, confidence = estimator.estimate_gender(roi)
+                
+                if gender == "spoof":
+                    return {"gender": "spoof", "message": "Suplantación interceptada por DeepFace LivenessCNN"}
+                
                 detected_gender = gender
                 
                 # Guarda registro si hay una cámara y es una detección válida
