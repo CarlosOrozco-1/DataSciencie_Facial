@@ -143,11 +143,15 @@ def analyze_frame(request: FrameAnalysisRequest, db: Session = Depends(get_db)):
             face_box = faces[0]
             roi = detector.get_face_roi(frame, face_box)
             if roi is not None and roi.size > 0:
+                # Anti-Spoofing: verificar Liveness
+                if not estimator.check_liveness(roi):
+                    # Retornamos spoof, no guardamos en DB
+                    return {"gender": "spoof", "message": "Posible ataque detectado (Foto/Pantalla)"}
+                
                 gender, confidence = estimator.estimate_gender(roi)
                 detected_gender = gender
                 
                 # Guarda registro si hay una cámara y es una detección válida
-                # camera_id puede venir o usarse uno estático/existente
                 if request.camera_id > 0:
                     camera = db.query(Camera).filter(Camera.id == request.camera_id).first()
                     if camera:

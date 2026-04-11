@@ -193,9 +193,25 @@ export function WebcamDetection({ onDetection, isDetecting, cameraId = 1, device
           )}
 
           {lastResult && lastResult !== 'none_detected' && !isProcessing && (
-            <div className="status-badge" style={{ backgroundColor: 'var(--accent-secondary)', color: 'white' }}>
-              {lastResult === 'male' ? <User style={{ width: '1rem', height: '1rem' }} /> : <UserRound style={{ width: '1rem', height: '1rem' }} />}
-              {lastResult === 'male' ? "HOMBRE DETECTADO" : "MUJER DETECTADA"}
+            <div className="status-badge" style={{ 
+              backgroundColor: lastResult === 'spoof' ? 'var(--danger)' : lastResult === 'unknown' ? 'var(--text-secondary)' : 'var(--accent-secondary)', 
+              color: 'white' 
+            }}>
+              {lastResult === 'spoof' ? (
+                 <AlertCircle style={{ width: '1rem', height: '1rem' }} />
+              ) : lastResult === 'male' ? (
+                 <User style={{ width: '1rem', height: '1rem' }} />
+              ) : (
+                 <UserRound style={{ width: '1rem', height: '1rem' }} />
+              )}
+              {lastResult === 'spoof' 
+                ? "SUPLANTACIÓN (FOTO)" 
+                : lastResult === 'unknown'
+                  ? "ROSTRO BORROSO"
+                  : lastResult === 'male' 
+                    ? "HOMBRE DETECTADO" 
+                    : "MUJER DETECTADA"
+              }
             </div>
           )}
         </div>

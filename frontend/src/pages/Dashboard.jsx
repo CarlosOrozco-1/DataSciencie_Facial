@@ -26,16 +26,29 @@ export default function Dashboard() {
 
   const fetchData = async () => {
     try {
-      const [statsRes, detectionsRes] = await Promise.all([
+      const [statsRes, detectionsRes, camerasRes] = await Promise.all([
         authFetch(`${API_URL}/api/detections/stats`),
-        authFetch(`${API_URL}/api/detections/`)
+        authFetch(`${API_URL}/api/detections/`),
+        authFetch(`${API_URL}/api/cameras/`)
       ])
       
-      if (statsRes.ok && detectionsRes.ok) {
+      if (statsRes.ok && detectionsRes.ok && camerasRes.ok) {
         const statsData = await statsRes.json()
         const detectionsData = await detectionsRes.json()
+        const camerasData = await camerasRes.json()
+        
+        const cameraMap = camerasData.reduce((acc, cam) => {
+          acc[cam.id] = cam.name || cam.hardware_label || `Cam ${cam.id}`
+          return acc
+        }, {})
+        
+        const enrichedDetections = detectionsData.slice(0, 5).map(det => ({
+            ...det,
+            camera_name: cameraMap[det.camera_id] || `Cámara ${det.camera_id}`
+        }))
+        
         setStats(statsData)
-        setRecentDetections(detectionsData.slice(0, 5))
+        setRecentDetections(enrichedDetections)
       }
     } catch (e) {
       console.error("Error fetching dashboard data:", e)
@@ -231,7 +244,7 @@ export default function Dashboard() {
                         {det.gender === 'male' ? 'Hombre detectado' : 'Mujer detectada'}
                       </div>
                       <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                        <Camera size={12} /> ID Cámara: {det.camera_id}
+                        <Camera size={12} /> {det.camera_name}
                       </div>
                     </div>
                   </div>

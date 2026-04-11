@@ -11,83 +11,68 @@ except ImportError:
 
 class GenderEstimator:
     """
-    Estimador de género usando modelo ONNX
-    NOTA: Para producción, usar un modelo entrenado como FairFace
-    Este es un ejemplo simplificado
+    Estimador de género usando OpenCV DNN Caffe y Liveness Detection
     """
     
-    def __init__(self, model_path: Optional[str] = None):
-        self.model_path = model_path
-        self.session = None
+    def __init__(self):
+        model_dir = os.path.join(os.path.dirname(__file__), "models")
+        prototxt = os.path.join(model_dir, "deploy_gender.prototxt")
+        weights = os.path.join(model_dir, "gender_net.caffemodel")
         
-        if ONNXRUNTIME_AVAILABLE and model_path and os.path.exists(model_path):
-            try:
-                self.session = ort.InferenceSession(model_path)
-            except Exception as e:
-                print(f"Error cargando modelo ONNX: {e}")
+        if os.path.exists(prototxt) and os.path.exists(weights):
+            self.gender_net = cv2.dnn.readNetFromCaffe(prototxt, weights)
+        else:
+            self.gender_net = None
+            
+        self.gender_list = ['male', 'female']
+        self.MODEL_MEAN_VALUES = (78.4263377603, 87.7689143744, 114.895847746)
+        
+    def check_liveness(self, face_roi: np.ndarray) -> bool:
+        """
+        Anti-Spoofing heurístico ligero.
+        Evalúa el grado de desenfoque. Las fotos a través de pantallas o papel
+        suelen estar flat o fuera de foco microscópico relativo.
+        """
+        if face_roi is None or face_roi.size == 0:
+            return False
+            
+        gray = cv2.cvtColor(face_roi, cv2.COLOR_BGR2GRAY)
+        variance = cv2.Laplacian(gray, cv2.CV_64F).var()
+        
+        # Umbral heurístico ultra-estricto. Elevado de 75 a 120.0.
+        # Las pantallas modernas de celular renderizan píxeles extremadamente nítidos
+        # que llegan a romper el umbral de 75. 120 restringe el pase sólo a texturas vivas/ruidosas.
+        if variance < 120.0:
+            return False
+            
+        # Comprobar brillos extramadamente altos (reflejos de pantalla del celular a la webcam)
+        bright_pixels = np.sum(gray > 245)
+        total_pixels = gray.size
+        if (bright_pixels / total_pixels) > 0.05: # Si más del 5% del rostro es completamente blanco estallado
+            return False
+            
+        return True
     
     def estimate_gender(self, face_roi: np.ndarray) -> Tuple[str, float]:
         """
-        Estima el género a partir de una imagen de rostro
+        Estima el género usando ResNet Caffe desde el ROI extraído.
         Retorna (género, confianza)
         """
-        if self.session is None:
-            return self._estimate_heuristic(face_roi)
+        if face_roi is None or face_roi.size == 0 or self.gender_net is None:
+            return "unknown", 0.0
         
         try:
-            return self._estimate_onnx(face_roi)
+            blob = cv2.dnn.blobFromImage(face_roi, 1.0, (227, 227), self.MODEL_MEAN_VALUES, swapRB=False)
+            self.gender_net.setInput(blob)
+            preds = self.gender_net.forward()
+            
+            # preds[0] -> probabilidad de [male, female] dependiendo del config del modelo de Levi & Hassner.
+            # En el modelo oficial de Levi: índice 0 es Male, índice 1 es Female.
+            gender_idx = preds[0].argmax()
+            gender = self.gender_list[gender_idx]
+            confidence = float(preds[0].max())
+            
+            return gender, confidence
         except Exception as e:
-            print(f"Error en estimación: {e}")
+            print(f"Error en estimación DNN de género: {e}")
             return "unknown", 0.0
-    
-    def _estimate_onnx(self, face_roi: np.ndarray) -> Tuple[str, float]:
-        """Estimación usando modelo ONNX"""
-        img = cv2.resize(face_roi, (64, 64))
-        img = img.astype(np.float32) / 255.0
-        img = img.transpose(2, 0, 1).reshape(1, 3, 64, 64)
-        
-        input_name = self.session.get_inputs()[0].name
-        output = self.session.run(None, {input_name: img})
-        
-        prob = output[0][0]
-        gender = "male" if prob[0] > 0.5 else "female"
-        confidence = float(max(prob[0], 1 - prob[0]))
-        
-        return gender, confidence
-    
-    def _estimate_heuristic(self, face_roi: np.ndarray) -> Tuple[str, float]:
-        """
-        Estimación heurística simple basada en características faciales
-        NOTA: Esto es solo para pruebas - usar modelo ONNX en producción
-        """
-        if face_roi is None or face_roi.size == 0:
-            return "unknown", 0.0
-        
-        h, w = face_roi.shape[:2]
-        
-        gray = cv2.cvtColor(face_roi, cv2.COLOR_BGR2GRAY)
-        
-        face_width = w
-        face_height = h
-        
-        aspect_ratio = face_width / face_height if face_height > 0 else 1.0
-        
-        hair_region = gray[int(h * 0.1):int(h * 0.4), :]
-        if hair_region.size > 0:
-            hair_brightness = np.mean(hair_region)
-            is_male = hair_brightness < 100
-            confidence = 0.65
-        else:
-            is_male = aspect_ratio > 0.75
-            confidence = 0.55
-        
-        gender = "male" if is_male else "female"
-        
-        return gender, confidence
-    
-    def preprocess_face(self, face_roi: np.ndarray, target_size: Tuple[int, int] = (64, 64)) -> np.ndarray:
-        """Preprocesa la imagen del rostro para el modelo"""
-        img = cv2.resize(face_roi, target_size)
-        img = img.astype(np.float32) / 255.0
-        img = img.transpose(2, 0, 1)
-        return img
