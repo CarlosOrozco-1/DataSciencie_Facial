@@ -116,3 +116,71 @@ docker compose up -d --build
 | **La cámara no activa** | Asegúrate de que estás accediendo por `https://` y no `http://`. |
 | **Página no carga (Timeout)** | Revisa la regla de **Ingress Rules** en la consola de Oracle y los comandos de `iptables`. |
 | **Error en Caddy Logs** | Ejecuta `docker compose logs caddy` para ver si pudo obtener el certificado SSL (necesitas un dominio real apuntando a la IP). |
+
+---
+
+## 🔐 4. Despliegue: Google OAuth + Reconocimiento Facial (25/04/2026)
+
+### 4.1 Migración de Base de Datos
+
+Antes de levantar la aplicación, ejecutar la migración SQL para agregar las columnas de Google OAuth y Reconocimiento Facial:
+
+```bash
+# Opción 1: Ejecutar el script SQL directamente
+docker exec -i facial_db psql -U facial_user -d facial_db < scriptsDB/migration_google_facial_auth.sql
+
+# Opción 2: Ejecutar los comandos manualmente
+docker exec facial_db psql -U facial_user -d facial_db -c "
+ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR UNIQUE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_google_enabled BOOLEAN DEFAULT FALSE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS face_embedding TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS has_face_enrolled BOOLEAN DEFAULT FALSE;
+ALTER TABLE users ALTER COLUMN hashed_password DROP NOT NULL;
+"
+```
+
+### 4.2 Verificar que las columnas se crearon
+
+```bash
+docker exec facial_db psql -U facial_user -d facial_db -c "\d users"
+```
+
+Deberías ver las columnas nuevas: `google_id`, `is_google_enabled`, `face_embedding`, `has_face_enrolled`.
+
+### 4.3 Variables de Entorno
+
+Agregar al archivo `.env` del servidor:
+```bash
+# Google OAuth
+GOOGLE_CLIENT_ID=1082189297764-sblg1265oumq46854eb2loajlchtirl4.apps.googleusercontent.com
+
+# Reconocimiento Facial
+FACE_MATCH_TOLERANCE=0.6
+```
+
+### 4.4 Google Cloud Console
+
+En [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials), agregar el dominio de producción como origen de JavaScript autorizado:
+- `https://tu-dominio.com` (producción)
+- `http://localhost:8501` (desarrollo local)
+
+### 4.5 Rebuild y Despliegue
+
+```bash
+# Reconstruir con las nuevas dependencias (dlib tarda ~5-10 min la primera vez)
+docker compose up -d --build
+
+# Verificar logs
+docker compose logs -f app
+```
+
+### 4.6 Nuevos Endpoints API
+
+| Método | Ruta | Auth | Descripción |
+|--------|------|------|-------------|
+| POST | `/api/auth/google` | No | Login/registro con Google |
+| POST | `/api/auth/google/unlink` | JWT | Desvincular cuenta Google |
+| POST | `/api/auth/face/enroll` | JWT | Registrar rostro (3 fotos) |
+| POST | `/api/auth/face/login` | No | Login con rostro |
+| DELETE | `/api/auth/face/enroll` | JWT | Eliminar rostro registrado |
+

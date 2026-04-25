@@ -36,6 +36,8 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD}
       SMTP_FROM: ${SMTP_FROM:-${SMTP_USER}}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8501}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      FACE_MATCH_TOLERANCE: ${FACE_MATCH_TOLERANCE:-0.6}
     ports:
       - "8000:8000"
     depends_on:

@@ -39,6 +39,8 @@ def get_token_from_request(request: Request) -> str:
     return token
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
+    if not hashed_password:
+        return False  # Usuario sin contraseña (ej: registrado solo con Google)
     return pwd_context.verify(plain_password, hashed_password)
 
 def get_password_hash(password: str) -> str:
@@ -59,7 +61,7 @@ def create_reset_token(email: str) -> str:
     """Genera un JWT de corta vida (15 min) exclusivo para reset de contraseña"""
     return create_access_token(
         data={"sub": email, "purpose": "password_reset"},
-        expires_delta=timedelta(minutes=15)
+        expires_delta=timedelta(seconds=60)
     )
 
 def verify_reset_token(token: str) -> str:

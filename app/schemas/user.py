@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 # Schema base con campos compartidos entre creación y lectura
@@ -33,6 +33,8 @@ class UserResponse(UserBase):
     id: int
     is_active: bool
     is_2fa_enabled: bool = False
+    is_google_enabled: bool = False
+    has_face_enrolled: bool = False
     created_at: Optional[datetime] = None
 
     class Config:
@@ -73,3 +75,14 @@ class TwoFactorVerifyRequest(BaseModel):
 class TwoFactorValidateRequest(BaseModel):
     temp_token: str  # Token temporal del paso 1 del login
     code: str        # Código de 6 dígitos
+
+# ======== Schemas para Google OAuth ========
+class GoogleAuthRequest(BaseModel):
+    id_token: str  # Token JWT firmado por Google
+
+# ======== Schemas para Reconocimiento Facial ========
+class FaceEnrollRequest(BaseModel):
+    images: List[str]  # Lista de imágenes en base64 (3 capturas)
+
+class FaceLoginRequest(BaseModel):
+    image: str  # Imagen en base64 (1 captura)

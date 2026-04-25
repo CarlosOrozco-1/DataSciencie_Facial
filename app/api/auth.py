@@ -3,6 +3,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
+import os
+import logging
+import base64
+import cv2
+import numpy as np
+import json
+
 from app.database.connection import get_db
 from app.models.user import User
 from app.core.security import (
@@ -12,11 +19,14 @@ from app.core.security import (
     generate_totp_secret, generate_qr_code, verify_totp_code,
     get_current_user
 )
-from app.core.email_service import send_password_reset_email
+from app.core.email_service import send_password_reset_email, send_welcome_email
 from app.schemas.user import (
     Token, LoginResponse, ForgotPasswordRequest, ResetPasswordRequest,
-    TwoFactorSetupResponse, TwoFactorVerifyRequest, TwoFactorValidateRequest
+    TwoFactorSetupResponse, TwoFactorVerifyRequest, TwoFactorValidateRequest,
+    GoogleAuthRequest, FaceEnrollRequest, FaceLoginRequest
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -137,6 +147,295 @@ def disable_2fa(current_user: User = Depends(get_current_user), db: Session = De
     current_user.totp_secret = None
     db.commit()
     return {"message": "2FA desactivado. Ahora solo necesitas usuario y contraseña para ingresar"}
+
+# ======== Google OAuth 2.0 ========
+
+@router.post("/google", response_model=Token)
+def google_auth(data: GoogleAuthRequest, db: Session = Depends(get_db)):
+    """Autenticación con Google. Recibe el id_token de Google Identity Services,
+    lo verifica contra los servidores de Google, y emite un JWT propio de GenderSense.
+    
+    Si el usuario no existe, lo crea automáticamente (auto-registro).
+    Si ya existe con el mismo email, vincula la cuenta Google."""
+    
+    from google.oauth2 import id_token
+    from google.auth.transport import requests as google_requests
+    
+    GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
+    
+    if not GOOGLE_CLIENT_ID:
+        raise HTTPException(status_code=500, detail="GOOGLE_CLIENT_ID no configurado en el servidor")
+    
+    try:
+        # Verificar el token con Google (valida firma, expiración, audience)
+        idinfo = id_token.verify_oauth2_token(
+            data.id_token,
+            google_requests.Request(),
+            GOOGLE_CLIENT_ID
+        )
+        
+        # Extraer datos del usuario desde el payload del token
+        google_sub = idinfo.get("sub")       # ID único de Google
+        email = idinfo.get("email")
+        name = idinfo.get("name", "")
+        
+        if not email:
+            raise HTTPException(status_code=400, detail="El token de Google no contiene email")
+        
+    except ValueError as e:
+        logger.error(f"Error verificando token de Google: {e}")
+        raise HTTPException(status_code=401, detail="Token de Google inválido o expirado")
+    
+    # Buscar usuario existente por google_id o email
+    user = db.query(User).filter(
+        or_(User.google_id == google_sub, User.email == email)
+    ).first()
+    
+    if user:
+        # Usuario existente: vincular google_id si aún no lo tiene
+        if not user.google_id:
+            user.google_id = google_sub
+            user.is_google_enabled = True
+            db.commit()
+            logger.info(f"Cuenta Google vinculada al usuario existente: {email}")
+    else:
+        # Usuario nuevo: auto-registro con datos de Google
+        # Generar username único basado en el email
+        base_username = email.split("@")[0]
+        username = base_username
+        counter = 1
+        while db.query(User).filter(User.username == username).first():
+            username = f"{base_username}{counter}"
+            counter += 1
+        
+        user = User(
+            username=username,
+            email=email,
+            hashed_password=None,  # Sin contraseña (solo Google)
+            google_id=google_sub,
+            is_google_enabled=True,
+            is_admin=False,
+            is_active=True
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        logger.info(f"Nuevo usuario creado via Google: {email} (username: {username})")
+        
+        # Enviar correo de bienvenida al nuevo usuario
+        send_welcome_email(email, username, auth_method="Google")
+    
+    if not user.is_active:
+        raise HTTPException(status_code=400, detail="Usuario inactivo")
+    
+    # Emitir JWT de GenderSense
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.email, "is_admin": user.is_admin}, expires_delta=access_token_expires
+    )
+    
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@router.post("/google/unlink")
+def unlink_google(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Desvincula la cuenta de Google del usuario actual.
+    Solo se permite si el usuario tiene contraseña configurada (para no quedarse sin acceso)."""
+    
+    if not current_user.google_id:
+        raise HTTPException(status_code=400, detail="No tienes una cuenta de Google vinculada")
+    
+    if not current_user.hashed_password:
+        raise HTTPException(
+            status_code=400, 
+            detail="No puedes desvincular Google sin tener una contraseña configurada. Primero establece una contraseña."
+        )
+    
+    current_user.google_id = None
+    current_user.is_google_enabled = False
+    db.commit()
+    
+    return {"message": "Cuenta de Google desvinculada exitosamente"}
+
+# ======== Reconocimiento Facial ========
+
+@router.post("/face/enroll")
+def enroll_face(data: FaceEnrollRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Registra el rostro del usuario autenticado.
+    
+    Recibe una lista de imágenes base64 (3 capturas recomendadas),
+    genera embeddings para cada una y almacena el promedio en la BD."""
+    
+    from backend.vision.face_auth import FaceAuthenticator, FACE_RECOGNITION_AVAILABLE
+    from backend.vision.estimator import GenderEstimator
+    
+    if not FACE_RECOGNITION_AVAILABLE:
+        raise HTTPException(status_code=500, detail="face_recognition no está instalado en el servidor")
+    
+    if len(data.images) < 1:
+        raise HTTPException(status_code=400, detail="Se requiere al menos 1 imagen")
+    
+    if len(data.images) > 5:
+        raise HTTPException(status_code=400, detail="Máximo 5 imágenes permitidas")
+    
+    authenticator = FaceAuthenticator()
+    estimator = GenderEstimator()
+    decoded_images = []
+    
+    for i, img_b64 in enumerate(data.images):
+        try:
+            # Extraer base64 si incluye el prefijo data:image/...
+            encoded_data = img_b64
+            if ',' in encoded_data:
+                encoded_data = encoded_data.split(',')[1]
+            
+            img_data = base64.b64decode(encoded_data)
+            nparr = np.frombuffer(img_data, np.uint8)
+            frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            
+            if frame is None:
+                raise HTTPException(status_code=400, detail=f"Imagen {i+1} inválida")
+            
+            # Verificar liveness (anti-spoofing) usando el detector existente
+            from backend.vision.detector import FaceDetector
+            detector = FaceDetector()
+            faces = detector.detect_faces(frame)
+            
+            if len(faces) == 0:
+                raise HTTPException(status_code=400, detail=f"No se detectó rostro en la imagen {i+1}")
+            
+            face_box = faces[0]
+            roi = detector.get_face_roi(frame, face_box)
+            
+            if roi is not None and not estimator.check_liveness(roi):
+                raise HTTPException(status_code=400, detail=f"La imagen {i+1} parece ser una foto o pantalla (anti-spoofing)")
+            
+            decoded_images.append(frame)
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error procesando imagen {i+1}: {e}")
+            raise HTTPException(status_code=400, detail=f"Error procesando imagen {i+1}: {str(e)}")
+    
+    # Generar embedding promedio
+    embedding = authenticator.enroll_face(decoded_images)
+    
+    if embedding is None:
+        raise HTTPException(status_code=400, detail="No se pudo generar el embedding facial. Asegúrate de que tu rostro sea claramente visible.")
+    
+    # Guardar en la BD
+    current_user.face_embedding = FaceAuthenticator.embedding_to_json(embedding)
+    current_user.has_face_enrolled = True
+    db.commit()
+    
+    return {"message": "✅ Rostro registrado exitosamente. Ya puedes iniciar sesión con reconocimiento facial."}
+
+@router.delete("/face/enroll")
+def delete_face_enrollment(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Elimina el rostro registrado del usuario actual.
+    Solo se permite si tiene otro método de acceso disponible."""
+    
+    if not current_user.has_face_enrolled:
+        raise HTTPException(status_code=400, detail="No tienes un rostro registrado")
+    
+    # Verificar que no se quede sin método de acceso
+    has_password = current_user.hashed_password is not None
+    has_google = current_user.is_google_enabled
+    
+    if not has_password and not has_google:
+        raise HTTPException(
+            status_code=400,
+            detail="No puedes eliminar tu rostro sin tener contraseña o Google configurado."
+        )
+    
+    current_user.face_embedding = None
+    current_user.has_face_enrolled = False
+    db.commit()
+    
+    return {"message": "Rostro eliminado exitosamente"}
+
+@router.post("/face/login", response_model=Token)
+def face_login(data: FaceLoginRequest, db: Session = Depends(get_db)):
+    """Login mediante reconocimiento facial.
+    
+    Recibe una imagen base64, genera el embedding y lo compara
+    contra todos los embeddings registrados en la BD."""
+    
+    from backend.vision.face_auth import FaceAuthenticator, FACE_RECOGNITION_AVAILABLE
+    
+    if not FACE_RECOGNITION_AVAILABLE:
+        raise HTTPException(status_code=500, detail="face_recognition no está instalado en el servidor")
+    
+    # Decodificar imagen
+    try:
+        encoded_data = data.image
+        if ',' in encoded_data:
+            encoded_data = encoded_data.split(',')[1]
+        
+        img_data = base64.b64decode(encoded_data)
+        nparr = np.frombuffer(img_data, np.uint8)
+        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        
+        if frame is None:
+            raise HTTPException(status_code=400, detail="Imagen inválida")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error decodificando imagen: {str(e)}")
+    
+    # Verificar liveness (anti-spoofing)
+    from backend.vision.detector import FaceDetector
+    from backend.vision.estimator import GenderEstimator
+    
+    detector = FaceDetector()
+    estimator = GenderEstimator()
+    faces = detector.detect_faces(frame)
+    
+    if len(faces) == 0:
+        raise HTTPException(status_code=400, detail="No se detectó ningún rostro en la imagen")
+    
+    face_box = faces[0]
+    roi = detector.get_face_roi(frame, face_box)
+    
+    if roi is not None and not estimator.check_liveness(roi):
+        raise HTTPException(status_code=400, detail="Posible ataque detectado: la imagen parece ser una foto o pantalla")
+    
+    # Generar embedding del candidato
+    authenticator = FaceAuthenticator()
+    candidate_embedding = authenticator.generate_embedding(frame)
+    
+    if candidate_embedding is None:
+        raise HTTPException(status_code=400, detail="No se pudo generar el embedding facial")
+    
+    # Obtener todos los usuarios con rostro registrado
+    enrolled_users = db.query(User).filter(
+        User.has_face_enrolled == True,
+        User.face_embedding.isnot(None),
+        User.is_active == True
+    ).all()
+    
+    if not enrolled_users:
+        raise HTTPException(status_code=401, detail="No hay usuarios con rostro registrado")
+    
+    # Buscar match
+    registered = [(u, u.face_embedding) for u in enrolled_users]
+    result = authenticator.find_matching_user(candidate_embedding, registered)
+    
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Rostro no reconocido. Si no has registrado tu rostro, hazlo desde tu perfil.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    user, distance = result
+    logger.info(f"Login facial exitoso: {user.email} (distancia: {distance:.4f})")
+    
+    # Emitir JWT
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.email, "is_admin": user.is_admin}, expires_delta=access_token_expires
+    )
+    
+    return {"access_token": access_token, "token_type": "bearer"}
 
 # ======== Recuperación de Contraseña ========
 
