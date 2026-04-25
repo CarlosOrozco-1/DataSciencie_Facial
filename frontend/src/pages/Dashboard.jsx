@@ -7,7 +7,8 @@ import {
   Clock, 
   Camera, 
   UserCheck,
-  ChevronRight
+  ChevronRight,
+  MapPin
 } from 'lucide-react'
 import { 
   AreaChart, 
@@ -23,19 +24,26 @@ export default function Dashboard() {
   const [stats, setStats] = useState(null)
   const [recentDetections, setRecentDetections] = useState([])
   const [loading, setLoading] = useState(true)
+  const [locations, setLocations] = useState([])
+  const [selectedLocation, setSelectedLocation] = useState('')
 
   const fetchData = async () => {
     try {
-      const [statsRes, detectionsRes, camerasRes] = await Promise.all([
-        authFetch(`${API_URL}/api/detections/stats`),
-        authFetch(`${API_URL}/api/detections/`),
-        authFetch(`${API_URL}/api/cameras/`)
+      const locationParam = selectedLocation ? `&location=${encodeURIComponent(selectedLocation)}` : ''
+      const [statsRes, detectionsRes, camerasRes, locationsRes] = await Promise.all([
+        authFetch(`${API_URL}/api/detections/stats${locationParam ? `?${locationParam.slice(1)}` : ''}`),
+        authFetch(`${API_URL}/api/detections/${locationParam ? `?${locationParam.slice(1)}` : ''}`),
+        authFetch(`${API_URL}/api/cameras/`),
+        authFetch(`${API_URL}/api/cameras/locations`)
       ])
       
       if (statsRes.ok && detectionsRes.ok && camerasRes.ok) {
         const statsData = await statsRes.json()
         const detectionsData = await detectionsRes.json()
         const camerasData = await camerasRes.json()
+        const locationsData = locationsRes.ok ? await locationsRes.json() : []
+        
+        setLocations(locationsData)
         
         const cameraMap = camerasData.reduce((acc, cam) => {
           acc[cam.id] = cam.name || cam.hardware_label || `Cam ${cam.id}`
@@ -61,7 +69,11 @@ export default function Dashboard() {
     fetchData()
     const interval = setInterval(fetchData, 30000)
     return () => clearInterval(interval)
-  }, [])
+  }, [selectedLocation])
+
+  const handleLocationChange = (e) => {
+    setSelectedLocation(e.target.value)
+  }
 
   if (loading || !stats) {
     return (
@@ -83,6 +95,29 @@ export default function Dashboard() {
           <p className="page-subtitle">Análisis demográfico y tendencias en tiempo real</p>
         </div>
         <div style={{ display: 'flex', gap: '1rem' }}>
+          {locations.length > 0 && (
+            <div className="card" style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <MapPin size={16} style={{ color: 'var(--accent-primary)' }} />
+              <select 
+                value={selectedLocation}
+                onChange={handleLocationChange}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.9rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  outline: 'none'
+                }}
+              >
+                <option value="">Todas las ubicaciones</option>
+                {locations.map(loc => (
+                  <option key={loc} value={loc}>{loc}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="card" style={{ padding: '0.75rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <Activity size={20} style={{ color: 'var(--success)' }} />
             <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>Sistema Activo</span>

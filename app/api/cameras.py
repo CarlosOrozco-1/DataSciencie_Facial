@@ -20,6 +20,15 @@ router = APIRouter(
 def get_cameras(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     return db.query(Camera).offset(skip).limit(limit).all()
 
+@router.get("/locations")
+def get_locations(db: Session = Depends(get_db)):
+    """Obtiene lista de ubicaciones únicas de cámaras"""
+    locations = db.query(Camera.location).filter(
+        Camera.location.isnot(None),
+        Camera.location != ""
+    ).distinct().all()
+    return [loc[0] for loc in locations if loc[0]]
+
 @router.get("/{camera_id}", response_model=CameraResponse)
 def get_camera(camera_id: int, db: Session = Depends(get_db)):
     camera = db.query(Camera).filter(Camera.id == camera_id).first()

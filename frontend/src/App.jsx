@@ -8,6 +8,7 @@ import Login from './pages/Login'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 import UserProfile from './pages/UserProfile'
+import DetectionsManager from './pages/DetectionsManager'
 import './index.css'
 
 // Componente raíz con control de autenticación JWT y rutas de recuperación.
@@ -69,6 +70,7 @@ function App() {
       case 'manager': return <CameraManager />
       case 'users': return <UserManager />
       case 'user-profile': return <UserProfile />
+      case 'detections': return <DetectionsManager />
       default: return <Dashboard />
     }
   }
