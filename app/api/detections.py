@@ -6,7 +6,7 @@ from datetime import datetime
 from app.database.connection import get_db
 from app.models.detection import Detection
 from app.models.camera import Camera
-from app.schemas.detection import DetectionCreate, DetectionResponse, DetectionStats, FrameAnalysisRequest
+from app.schemas.detection import DetectionCreate, DetectionUpdate, DetectionResponse, DetectionStats, FrameAnalysisRequest
 from app.core.security import get_current_user
 import base64
 import cv2
@@ -31,22 +31,7 @@ def get_detections(
     limit: int = 100, 
     camera_id: Optional[int] = None,
     gender: Optional[str] = None,
-    db: Session = Depends(get_db)
-):
-    query = db.query(Detection)
-    
-    if camera_id:
-        query = query.filter(Detection.camera_id == camera_id)
-    if gender:
-        query = query.filter(Detection.gender == gender)
-    
-    return query.order_by(Detection.timestamp.desc()).offset(skip).limit(limit).all()
-
-from datetime import datetime, timedelta
-
-@router.get("/stats", response_model=DetectionStats)
-def get_stats(
-    camera_id: Optional[int] = None,
+    location: Optional[str] = None,
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
     db: Session = Depends(get_db)
@@ -55,6 +40,33 @@ def get_stats(
     
     if camera_id:
         query = query.filter(Detection.camera_id == camera_id)
+    if gender:
+        query = query.filter(Detection.gender == gender)
+    if location:
+        query = query.join(Camera).filter(Camera.location == location)
+    if start_date:
+        query = query.filter(Detection.timestamp >= start_date)
+    if end_date:
+        query = query.filter(Detection.timestamp <= end_date)
+    
+    return query.order_by(Detection.timestamp.desc()).offset(skip).limit(limit).all()
+
+from datetime import datetime, timedelta
+
+@router.get("/stats", response_model=DetectionStats)
+def get_stats(
+    camera_id: Optional[int] = None,
+    location: Optional[str] = None,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+    db: Session = Depends(get_db)
+):
+    query = db.query(Detection)
+    
+    if camera_id:
+        query = query.filter(Detection.camera_id == camera_id)
+    if location:
+        query = query.join(Camera).filter(Camera.location == location)
     if start_date:
         query = query.filter(Detection.timestamp >= start_date)
     if end_date:
@@ -74,6 +86,8 @@ def get_stats(
     
     if camera_id:
         history_query = history_query.filter(Detection.camera_id == camera_id)
+    if location:
+        history_query = history_query.join(Camera).filter(Camera.location == location)
         
     history_data = history_query.group_by('hour').order_by('hour').all()
     
@@ -168,3 +182,27 @@ def analyze_frame(request: FrameAnalysisRequest, db: Session = Depends(get_db)):
     except Exception as e:
         logger.error(f"Error en analyze_frame: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.put("/{detection_id}", response_model=DetectionResponse)
+def update_detection(detection_id: int, detection: DetectionUpdate, db: Session = Depends(get_db)):
+    db_detection = db.query(Detection).filter(Detection.id == detection_id).first()
+    if not db_detection:
+        raise HTTPException(status_code=404, detail="Detection not found")
+    
+    update_data = detection.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_detection, key, value)
+    
+    db.commit()
+    db.refresh(db_detection)
+    return db_detection
+
+@router.delete("/{detection_id}", status_code=204)
+def delete_detection(detection_id: int, db: Session = Depends(get_db)):
+    db_detection = db.query(Detection).filter(Detection.id == detection_id).first()
+    if not db_detection:
+        raise HTTPException(status_code=404, detail="Detection not found")
+    
+    db.delete(db_detection)
+    db.commit()
+    return None

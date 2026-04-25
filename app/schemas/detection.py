@@ -10,6 +10,10 @@ class DetectionBase(BaseModel):
 class DetectionCreate(DetectionBase):
     pass
 
+class DetectionUpdate(BaseModel):
+    gender: Optional[str] = None
+    confidence: Optional[float] = None
+
 class DetectionResponse(DetectionBase):
     id: int
     timestamp: datetime
