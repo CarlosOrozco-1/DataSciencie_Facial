@@ -39,16 +39,16 @@ class GenderEstimator:
         gray = cv2.cvtColor(face_roi, cv2.COLOR_BGR2GRAY)
         variance = cv2.Laplacian(gray, cv2.CV_64F).var()
         
-        # Umbral heurístico ultra-estricto. Elevado de 75 a 120.0.
-        # Las pantallas modernas de celular renderizan píxeles extremadamente nítidos
-        # que llegan a romper el umbral de 75. 120 restringe el pase sólo a texturas vivas/ruidosas.
-        if variance < 120.0:
+        # Umbral heurístico ajustado para webcams. Bajado de 120.0 a 35.0.
+        # Las webcams estándar tienen resoluciones bajas que naturalmente reducen la varianza.
+        # 120 marcaba rostros reales como "SPOOF" con mucha frecuencia.
+        if variance < 35.0:
             return False
             
-        # Comprobar brillos extramadamente altos (reflejos de pantalla del celular a la webcam)
+        # Comprobar brillos extremadamente altos (reflejos de pantalla del celular a la webcam)
         bright_pixels = np.sum(gray > 245)
         total_pixels = gray.size
-        if (bright_pixels / total_pixels) > 0.05: # Si más del 5% del rostro es completamente blanco estallado
+        if (bright_pixels / total_pixels) > 0.08: # Si más del 8% del rostro es completamente blanco
             return False
             
         return True
@@ -62,7 +62,12 @@ class GenderEstimator:
             return "unknown", 0.0
         
         try:
-            blob = cv2.dnn.blobFromImage(face_roi, 1.0, (227, 227), self.MODEL_MEAN_VALUES, swapRB=False)
+            # Preprocesamiento: Mejorar contraste para ayudar al modelo Caffe
+            img_yuv = cv2.cvtColor(face_roi, cv2.COLOR_BGR2YUV)
+            img_yuv[:,:,0] = cv2.equalizeHist(img_yuv[:,:,0])
+            enhanced_roi = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)
+            
+            blob = cv2.dnn.blobFromImage(enhanced_roi, 1.0, (227, 227), self.MODEL_MEAN_VALUES, swapRB=False)
             self.gender_net.setInput(blob)
             preds = self.gender_net.forward()
             

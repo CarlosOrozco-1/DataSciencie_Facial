@@ -191,9 +191,6 @@ export default function CameraManager() {
               <div key={cam.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 <div className="flex-between">
                   <h3 style={{ margin: 0, fontSize: '1.1rem' }}>{cam.name}</h3>
-                  <span className={`status-badge ${isActive ? 'status-active' : 'status-inactive'}`}>
-                    {isActive ? 'Transmisión Activa' : 'Desconectado'}
-                  </span>
                 </div>
                 
                 <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.9rem' }}>📍 {cam.location || 'Sin Ubicación'}</p>
@@ -201,18 +198,12 @@ export default function CameraManager() {
                   {cam.url}
                 </code>
                 
-                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-                  <button 
-                    className={`btn ${isActive ? 'btn-danger' : 'btn-primary'}`} 
-                    style={{ flex: 1, padding: '0.5rem' }}
-                    onClick={() => handleToggleProcessing(cam.id, isActive)}
-                  >
-                    {isActive ? '⏹️ Detener' : '▶️ Iniciar'}
-                  </button>
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', justifyContent: 'flex-end' }}>
                   <button 
                     className="btn btn-danger" 
                     style={{ padding: '0.5rem' }}
                     onClick={() => handleDeleteRequest(cam.id)}
+                    title="Eliminar Cámara"
                   >
                     🗑️
                   </button>

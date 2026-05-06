@@ -73,16 +73,16 @@ def _send_email(to_email: str, subject: str, html_body: str, text_body: str) -> 
 def send_password_reset_email(to_email: str, reset_token: str) -> bool:
     """Envía un correo con el enlace para restablecer la contraseña.
     
-    El enlace contiene un token JWT que expira en 60 segundos.
+    El enlace contiene un token JWT que expira en 5 minutos.
     """
     reset_link = f"{FRONTEND_URL}/?reset_token={reset_token}"
     
-    subject = "🔐 GenderSense - Recuperación de Contraseña" 
+    subject = "🔐 BioFacial - Recuperación de Contraseña" 
     
     html_body = f"""
     <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 500px; margin: 0 auto; background: #1e293b; border-radius: 12px; padding: 2rem; color: #f8fafc;">
         <div style="text-align: center; margin-bottom: 1.5rem;">
-            <h1 style="color: #38bdf8; margin: 0;">🔐 GenderSense</h1>
+            <h1 style="color: #38bdf8; margin: 0;">🔐 BioFacial</h1>
             <p style="color: #94a3b8; margin-top: 0.25rem;">Sistema de Reconocimiento Facial</p>
         </div>
         
@@ -95,14 +95,14 @@ def send_password_reset_email(to_email: str, reset_token: str) -> bool:
             </a>
         </div>
         
-        <p style="color: #94a3b8; font-size: 0.85rem;">Este enlace expira en <strong>60 segundos</strong>. Si no solicitaste este cambio, ignora este correo.</p>
+        <p style="color: #94a3b8; font-size: 0.85rem;">Este enlace expira en <strong>5 minutos</strong>. Si no solicitaste este cambio, ignora este correo.</p>
         
         <hr style="border: 1px solid #334155; margin: 1.5rem 0;">
-        <p style="color: #64748b; font-size: 0.75rem; text-align: center;">GenderSense © 2026 — Solo personal autorizado</p>
+        <p style="color: #64748b; font-size: 0.75rem; text-align: center;">BioFacial © 2026 — Solo personal autorizado</p>
     </div>
     """
     
-    text_body = f"Recupera tu contraseña visitando: {reset_link}\nEste enlace expira en 60 segundos."
+    text_body = f"Recupera tu contraseña visitando: {reset_link}\nEste enlace expira en 5 minutos."
     
     success = _send_email(to_email, subject, html_body, text_body)
     
@@ -119,7 +119,7 @@ def send_welcome_email(to_email: str, username: str, auth_method: str = "Google"
     Se envía cuando un usuario nuevo entra por primera vez via Google OAuth
     y su cuenta se crea automáticamente.
     """
-    subject = "🎉 ¡Bienvenido a GenderSense!"
+    subject = "🎉 ¡Bienvenido a BioFacial!"
     
     login_link = FRONTEND_URL
     
@@ -127,7 +127,7 @@ def send_welcome_email(to_email: str, username: str, auth_method: str = "Google"
     <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 500px; margin: 0 auto; background: #1e293b; border-radius: 12px; padding: 2rem; color: #f8fafc;">
         <div style="text-align: center; margin-bottom: 1.5rem;">
             <h1 style="color: #38bdf8; margin: 0;">🎉 ¡Bienvenido!</h1>
-            <p style="color: #94a3b8; margin-top: 0.25rem;">GenderSense — Sistema de Reconocimiento Facial</p>
+            <p style="color: #94a3b8; margin-top: 0.25rem;">BioFacial — Sistema de Reconocimiento Facial</p>
         </div>
         
         <p>Hola <strong>{username}</strong>,</p>
@@ -142,17 +142,17 @@ def send_welcome_email(to_email: str, username: str, auth_method: str = "Google"
         
         <div style="text-align: center; margin: 2rem 0;">
             <a href="{login_link}" style="background: linear-gradient(135deg, #10b981, #38bdf8); color: white; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 1rem;">
-                Ir a GenderSense
+                Ir a BioFacial
             </a>
         </div>
         
         <p style="color: #94a3b8; font-size: 0.85rem;">Desde tu perfil puedes activar métodos de seguridad adicionales como <strong>Autenticación de Doble Factor (2FA)</strong> o <strong>Reconocimiento Facial</strong>.</p>
         
         <hr style="border: 1px solid #334155; margin: 1.5rem 0;">
-        <p style="color: #64748b; font-size: 0.75rem; text-align: center;">GenderSense © 2026 — Solo personal autorizado</p>
+        <p style="color: #64748b; font-size: 0.75rem; text-align: center;">BioFacial © 2026 — Solo personal autorizado</p>
     </div>
     """
     
-    text_body = f"Bienvenido a GenderSense, {username}!\n\nTu cuenta ha sido creada via {auth_method}.\nEmail: {to_email}\n\nAccede en: {login_link}"
+    text_body = f"Bienvenido a BioFacial, {username}!\n\nTu cuenta ha sido creada via {auth_method}.\nEmail: {to_email}\n\nAccede en: {login_link}"
     
     return _send_email(to_email, subject, html_body, text_body)

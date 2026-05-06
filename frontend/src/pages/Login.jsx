@@ -31,11 +31,16 @@ export default function Login({ onLogin, onNavigate }) {
   const canvasRef = useRef(null)
   const streamRef = useRef(null)
 
+  const googleInitRef = useRef(false)
+
   // ======== Google OAuth ========
   useEffect(() => {
     // Inicializar Google Identity Services cuando el script esté cargado
     const initGoogle = () => {
+      if (googleInitRef.current) return;
+      
       if (window.google && window.google.accounts) {
+        googleInitRef.current = true;
         window.google.accounts.id.initialize({
           client_id: GOOGLE_CLIENT_ID,
           callback: handleGoogleCallback,
@@ -44,14 +49,15 @@ export default function Login({ onLogin, onNavigate }) {
           use_fedcm_for_prompt: false, // Evitar problemas con FedCM
         })
 
-        // Renderizar botón nativo de Google (formato icono)
         const googleBtnContainer = document.getElementById('google-signin-btn')
         if (googleBtnContainer) {
           window.google.accounts.id.renderButton(googleBtnContainer, {
-            type: 'icon',
-            theme: 'filled_black',
+            type: 'standard',
+            theme: 'outline',
             size: 'large',
-            shape: 'circle',
+            shape: 'pill',
+            text: 'signin_with',
+            width: 320,
           })
         }
       }
@@ -73,6 +79,12 @@ export default function Login({ onLogin, onNavigate }) {
   }, [requires2FA]) // Re-inicializar si cambia el estado de 2FA
 
   const handleGoogleCallback = async (response) => {
+    if (!response || !response.credential) {
+      console.warn("Google OAuth falló o no retornó credenciales válidas.");
+      setError('Autenticación de Google cancelada o denegada por origen inválido.');
+      return;
+    }
+    
     setError('')
     setLoading(true)
     
@@ -252,6 +264,20 @@ export default function Login({ onLogin, onNavigate }) {
     setFaceStatus('idle')
   }
 
+  // Ocultar el salto del bucle de video haciendo un fade out al final y fade in al inicio
+  const handleVideoTimeUpdate = (e) => {
+    const video = e.target;
+    if (!video.duration) return;
+    
+    // Si queda menos de 0.8 segundos, inicia el fade out a opacity 0
+    if (video.duration - video.currentTime < 0.8) {
+      video.style.opacity = 0;
+    } else {
+      // De lo contrario, lo mantiene o recupera a 1
+      video.style.opacity = 1;
+    }
+  };
+
   // Cleanup al desmontar
   useEffect(() => {
     return () => {
@@ -263,10 +289,18 @@ export default function Login({ onLogin, onNavigate }) {
 
   return (
     <div className="login-container">
+      {/* Fondo de video dinámico */}
+      <video 
+        className="login-video-bg" 
+        autoPlay loop muted playsInline 
+        src="/video_fondo.mp4" 
+        onTimeUpdate={handleVideoTimeUpdate}
+      />
+      
       <div className="login-card">
         <div className="login-header">
           <div className="login-icon">{requires2FA ? '🔑' : '🔐'}</div>
-          <h1 className="login-title">GenderSense</h1>
+          <h1 className="login-title">BioFacial</h1>
           <p className="login-subtitle">
             {requires2FA ? 'Verificación en Dos Pasos' : 'Sistema de Reconocimiento Facial'}
           </p>
@@ -329,14 +363,23 @@ export default function Login({ onLogin, onNavigate }) {
               <span>o accede con</span>
             </div>
 
-            {/* Botones de acceso rápido — solo iconos */}
-            <div className="login-icon-methods">
-              {/* Google */}
-              <div id="google-signin-btn" className="login-icon-btn-wrapper" title="Iniciar con Google"></div>
+            {/* Botones de acceso rápido — ovalados y transparentes */}
+            <div className="login-oval-methods" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', alignItems: 'center' }}>
+              {/* Google Overlay */}
+              <div className="login-btn-oval-wrapper" style={{ position: 'relative', width: '320px', height: '42px', maxWidth: '100%' }}>
+                {/* Botón Visual */}
+                <div className="login-btn-oval" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+                  <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="G" width="18" height="18" />
+                  <span>Acceder con Google</span>
+                </div>
+                {/* Iframe Real (invisible pero clickeable) */}
+                <div id="google-signin-btn" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0.01, zIndex: 10 }} title="Iniciar con Google"></div>
+              </div>
 
               {/* Reconocimiento Facial */}
-              <button type="button" className="login-icon-btn login-icon-face" onClick={startFaceLogin} disabled={loading} title="Iniciar con Rostro">
-                <Camera size={22} />
+              <button type="button" className="login-btn-oval face-oval" onClick={startFaceLogin} disabled={loading} title="Iniciar con Rostro">
+                <Camera size={20} />
+                <span>Reconocimiento Facial</span>
               </button>
             </div>
           </>
@@ -344,7 +387,7 @@ export default function Login({ onLogin, onNavigate }) {
           /* Paso 2: Código de 6 dígitos del Authenticator */
           <form onSubmit={handleVerify2FA} className="login-form">
             <div style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-              Abre <strong>Microsoft Authenticator</strong> e ingresa el código de 6 dígitos que aparece para <strong>GenderSense</strong>
+              Abre <strong>Microsoft Authenticator</strong> e ingresa el código de 6 dígitos que aparece para <strong>BioFacial</strong>
             </div>
 
             <div className="form-group">

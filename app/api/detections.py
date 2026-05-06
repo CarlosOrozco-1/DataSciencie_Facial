@@ -150,20 +150,21 @@ def analyze_frame(request: FrameAnalysisRequest, db: Session = Depends(get_db)):
             
         faces = detector.detect_faces(frame)
         
-        detected_gender = "none_detected"
+        detected_results = []
+        has_spoof = False
         
-        if len(faces) > 0:
-            # Por simplicidad tomamos la primera cara
-            face_box = faces[0]
+        for face_box in faces:
             roi = detector.get_face_roi(frame, face_box)
             if roi is not None and roi.size > 0:
                 # Anti-Spoofing: verificar Liveness
+                box_list = [int(v) for v in face_box]
                 if not estimator.check_liveness(roi):
-                    # Retornamos spoof, no guardamos en DB
-                    return {"gender": "spoof", "message": "Posible ataque detectado (Foto/Pantalla)"}
+                    has_spoof = True
+                    detected_results.append({"gender": "spoof", "confidence": 0.0, "box": box_list})
+                    continue
                 
                 gender, confidence = estimator.estimate_gender(roi)
-                detected_gender = gender
+                detected_results.append({"gender": gender, "confidence": confidence, "box": box_list})
                 
                 # Guarda registro si hay una cámara y es una detección válida
                 if request.camera_id > 0:
@@ -175,9 +176,11 @@ def analyze_frame(request: FrameAnalysisRequest, db: Session = Depends(get_db)):
                             confidence=confidence
                         )
                         db.add(db_detection)
-                        db.commit()
+        
+        if len(detected_results) > 0:
+            db.commit()
 
-        return {"gender": detected_gender}
+        return {"detections": detected_results, "has_spoof": has_spoof}
         
     except Exception as e:
         logger.error(f"Error en analyze_frame: {e}")

@@ -20,7 +20,7 @@ import {
   ResponsiveContainer 
 } from 'recharts'
 
-export default function Dashboard() {
+export default function Dashboard({ setCurrentPage }) {
   const [stats, setStats] = useState(null)
   const [recentDetections, setRecentDetections] = useState([])
   const [loading, setLoading] = useState(true)
@@ -88,7 +88,7 @@ export default function Dashboard() {
   const femalePercent = stats.total_detections > 0 ? (stats.female_count / stats.total_detections) * 100 : 0
 
   return (
-    <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
+    <div>
       <header className="flex-between" style={{ marginBottom: '2rem' }}>
         <div>
           <h1 className="page-title">Dashboard de Detecciones</h1>
@@ -253,7 +253,11 @@ export default function Dashboard() {
                 <Clock size={20} style={{ color: 'var(--accent-primary)' }} />
                 Actividad Reciente
               </h3>
-              <button className="btn" style={{ padding: '0.4rem', color: 'var(--accent-primary)', fontSize: '0.85rem' }}>
+              <button 
+                className="btn" 
+                onClick={() => setCurrentPage && setCurrentPage('detections')}
+                style={{ padding: '0.4rem', color: 'var(--accent-primary)', fontSize: '0.85rem' }}
+              >
                 Ver todo <ChevronRight size={16} />
               </button>
             </div>

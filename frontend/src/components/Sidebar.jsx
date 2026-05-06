@@ -15,7 +15,7 @@ export default function Sidebar({ currentPage, setCurrentPage, onLogout }) {
         {!isCollapsed && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <Activity size={28} />
-            <span>GenderSense</span>
+            <span>BioFacial</span>
           </div>
         )}
 
@@ -108,7 +108,7 @@ export default function Sidebar({ currentPage, setCurrentPage, onLogout }) {
         </button>
         {!isCollapsed && (
           <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '1rem', textAlign: 'center' }}>
-            GenderSense v2.1.0
+            BioFacial v2.1.0
           </div>
         )}
       </div>

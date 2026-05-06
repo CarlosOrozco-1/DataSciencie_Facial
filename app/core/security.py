@@ -52,16 +52,16 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=15) #15 minutos de expiración
+        expire = datetime.utcnow() + timedelta(minutes=5) #5 minutos de expiración
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
 def create_reset_token(email: str) -> str:
-    """Genera un JWT de corta vida (15 min) exclusivo para reset de contraseña"""
+    """Genera un JWT de corta vida (5 minutos) exclusivo para reset de contraseña"""
     return create_access_token(
         data={"sub": email, "purpose": "password_reset"},
-        expires_delta=timedelta(seconds=60)
+        expires_delta=timedelta(minutes=5)
     )
 
 def verify_reset_token(token: str) -> str:
@@ -74,7 +74,7 @@ def verify_reset_token(token: str) -> str:
             raise HTTPException(status_code=400, detail="Token de recuperación inválido")
         return email
     except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=400, detail="El enlace de recuperación ha expirado (15 min)")
+        raise HTTPException(status_code=400, detail="El enlace de recuperación ha expirado (5 min)")
     except jwt.PyJWTError:
         raise HTTPException(status_code=400, detail="Token de recuperación inválido")
 
@@ -111,7 +111,7 @@ def generate_qr_code(secret: str, email: str) -> str:
     # URI estándar que las apps de authenticator reconocen
     provisioning_uri = totp.provisioning_uri(
         name=email,
-        issuer_name="GenderSense"
+        issuer_name="BioFacial"
     )
     # Generar imagen QR
     qr = qrcode.QRCode(version=1, box_size=10, border=4)

@@ -146,6 +146,15 @@ body {
   margin-bottom: 2rem;
 }
 
+@keyframes pageFadeIn {
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.page-transition {
+  animation: pageFadeIn 0.35s ease-out forwards;
+}
+
 /* Cards */
 .card {
   background-color: var(--bg-card);
@@ -269,6 +278,11 @@ input {
   transition: border-color 0.2s ease;
 }
 
+select option {
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+}
+
 select:focus,
 input:focus {
   outline: none;
@@ -283,13 +297,39 @@ input:focus {
   justify-content: center;
   min-height: 100vh;
   padding: 1rem;
-  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+  position: relative;
+  overflow: hidden;
+  background-color: var(--bg-dark); /* fallback */
+}
+
+.login-video-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  /* Mejorar color y quitar aspecto opaco/lavado */
+  filter: contrast(1.2) brightness(1.1) saturate(1.3);
+  /* Un suave zoom in/out ayuda a disimular pequeños saltos en el bucle */
+  animation: breatheVideo 15s ease-in-out infinite alternate;
+  /* Transición suave de opacidad para el salto */
+  transition: opacity 0.8s ease-in-out;
+  opacity: 1;
+}
+
+@keyframes breatheVideo {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.08); }
 }
 
 .login-card {
-  background: rgba(30, 41, 59, 0.85);
-  backdrop-filter: blur(20px);
-  border: 1px solid var(--border-subtle);
+  position: relative;
+  z-index: 1;
+  background: rgba(30, 41, 59, 0.7);
+  backdrop-filter: blur(25px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 1.25rem;
   padding: 2rem 2.25rem;
   width: 100%;
@@ -507,58 +547,48 @@ input:focus {
   background: rgba(255, 255, 255, 0.05);
 }
 
-/* ==================== Login Icon Methods ==================== */
-.login-icon-methods {
+.login-btn-oval {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 1.25rem;
-}
-
-.login-icon-btn-wrapper {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.login-icon-btn {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  border: 1px solid var(--border-subtle);
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-primary);
+  gap: 0.75rem;
+  width: 320px;
+  max-width: 100%;
+  padding: 0.65rem 1rem;
+  border-radius: 24px;
+  background-color: rgba(255, 255, 255, 0.03); /* Más transparente */
+  backdrop-filter: blur(10px);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.25s ease;
-  font-family: inherit;
-  padding: 0;
+  transition: all 0.3s ease;
 }
 
-.login-icon-btn:hover {
-  transform: translateY(-2px) scale(1.08);
-  box-shadow: 0 4px 20px rgba(255, 255, 255, 0.1);
+.login-btn-oval:hover,
+.login-btn-oval-wrapper:hover .login-btn-oval {
+  background-color: rgba(255, 255, 255, 0.12); /* Efecto pastel tenue al pasar el mouse */
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
-.login-icon-btn:disabled {
-  opacity: 0.4;
+.login-btn-oval:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
-  transform: none;
 }
 
-.login-icon-face {
-  border-color: rgba(16, 185, 129, 0.4);
-  background: rgba(16, 185, 129, 0.1);
-  color: var(--success);
+.face-oval {
+  border-color: rgba(16, 185, 129, 0.5);
+  color: #a7f3d0;
 }
 
-.login-icon-face:hover {
-  background: rgba(16, 185, 129, 0.2);
-  border-color: var(--success);
-  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.25);
+.face-oval span {
+  color: white;
 }
+
+/* Ocultar contenedor antiguo de iconos si quedara residuo */
+.login-icon-methods { display: none; }
 
 /* Separador visual */
 .login-divider {

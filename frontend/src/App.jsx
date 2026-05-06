@@ -65,7 +65,7 @@ function App() {
   // Renderizado de páginas internas (autenticado)
   const renderPage = () => {
     switch (currentPage) {
-      case 'dashboard': return <Dashboard />
+      case 'dashboard': return <Dashboard setCurrentPage={setCurrentPage} />
       case 'live': return <LiveView />
       case 'manager': return <CameraManager />
       case 'users': return <UserManager />
@@ -79,7 +79,9 @@ function App() {
     <div className="app-layout">
       <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} onLogout={handleLogout} />
       <main className="main-content">
-        {renderPage()}
+        <div key={currentPage} className="page-transition">
+          {renderPage()}
+        </div>
       </main>
     </div>
   )

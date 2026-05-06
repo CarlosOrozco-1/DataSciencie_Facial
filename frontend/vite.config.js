@@ -10,6 +10,10 @@ export default defineConfig({
     port: 8501,
     watch: {
       usePolling: true // Helps with file changes under Windows WSL or Docker volumes
+    },
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
+      'Cross-Origin-Embedder-Policy': 'credentialless',
     }
   }
 })

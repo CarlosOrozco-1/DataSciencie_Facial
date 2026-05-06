@@ -153,7 +153,7 @@ def disable_2fa(current_user: User = Depends(get_current_user), db: Session = De
 @router.post("/google", response_model=Token)
 def google_auth(data: GoogleAuthRequest, db: Session = Depends(get_db)):
     """Autenticación con Google. Recibe el id_token de Google Identity Services,
-    lo verifica contra los servidores de Google, y emite un JWT propio de GenderSense.
+    lo verifica contra los servidores de Google, y emite un JWT propio de BioFacial.
     
     Si el usuario no existe, lo crea automáticamente (auto-registro).
     Si ya existe con el mismo email, vincula la cuenta Google."""
@@ -228,7 +228,7 @@ def google_auth(data: GoogleAuthRequest, db: Session = Depends(get_db)):
     if not user.is_active:
         raise HTTPException(status_code=400, detail="Usuario inactivo")
     
-    # Emitir JWT de GenderSense
+    # Emitir JWT de BioFacial
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": user.email, "is_admin": user.is_admin}, expires_delta=access_token_expires

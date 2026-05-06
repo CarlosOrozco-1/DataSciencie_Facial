@@ -5,6 +5,7 @@ import { authFetch, API_URL } from '../utils/api';
 export function WebcamDetection({ onDetection, isDetecting, cameraId = 1, deviceId, hardwareLabel }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const overlayRef = useRef(null);
   const [hasPermission, setHasPermission] = useState(null);
   const [cameraError, setCameraError] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -112,8 +113,16 @@ export function WebcamDetection({ onDetection, isDetecting, cameraId = 1, device
         if (!response.ok) throw new Error('API Error');
         
         const result = await response.json();
-        setLastResult(result.gender);
-        onDetection(result.gender);
+        if (result.detections && result.detections.length > 0) {
+          setLastResult(result.detections);
+          drawBoundingBoxes(result.detections);
+          // Por retrocompatibilidad, pasamos el primero o un resumen
+          onDetection(result.detections[0].gender);
+        } else {
+          setLastResult([]);
+          drawBoundingBoxes([]);
+          onDetection('none_detected');
+        }
       } catch (error) {
         console.error("Detection error:", error);
       } finally {
@@ -137,6 +146,51 @@ export function WebcamDetection({ onDetection, isDetecting, cameraId = 1, device
     return () => clearInterval(interval);
   }, [isDetecting, captureAndDetect]);
 
+  const drawBoundingBoxes = useCallback((detections) => {
+    if (!overlayRef.current || !videoRef.current) return;
+    const canvas = overlayRef.current;
+    const video = videoRef.current;
+    const ctx = canvas.getContext('2d');
+    
+    if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+    }
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    if (!detections || detections.length === 0) return;
+    
+    detections.forEach(det => {
+      if (det.box) {
+        const [x, y, w, h] = det.box;
+        ctx.strokeStyle = det.gender === 'spoof' ? '#ef4444' : '#10b981';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(x, y, w, h);
+        
+        ctx.fillStyle = det.gender === 'spoof' ? 'rgba(239, 68, 68, 0.9)' : 'rgba(16, 185, 129, 0.9)';
+        let labelText = '';
+        if (det.gender === 'spoof') {
+            labelText = 'FOTO/SUPLANTACIÓN';
+        } else if (det.gender === 'male') {
+            labelText = 'HOMBRE';
+        } else if (det.gender === 'female') {
+            labelText = 'MUJER';
+        } else {
+            labelText = 'DESCONOCIDO';
+        }
+        
+        const text = det.gender === 'spoof' ? labelText : `${labelText} ${Math.round(det.confidence * 100)}%`;
+        ctx.font = 'bold 16px Inter, sans-serif';
+        const textWidth = ctx.measureText(text).width;
+        ctx.fillRect(x, y > 24 ? y - 24 : y, textWidth + 10, 24);
+        
+        ctx.fillStyle = 'white';
+        ctx.fillText(text, x + 5, y > 24 ? y - 6 : y + 18);
+      }
+    });
+  }, []);
+
   return (
     <div className="card" style={{ position: 'relative', overflow: 'hidden', minHeight: '400px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 0, backgroundColor: 'var(--bg-card)' }}>
       {cameraError ? (
@@ -157,19 +211,38 @@ export function WebcamDetection({ onDetection, isDetecting, cameraId = 1, device
         <Loader2 style={{ width: '2rem', height: '2rem', color: 'var(--accent-primary)', animation: 'spin 1s linear infinite' }} />
       )}
 
-      <video 
-        ref={videoRef} 
-        autoPlay 
-        playsInline 
-        muted 
-        style={{
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-          opacity: hasPermission ? 1 : 0,
-          transition: 'opacity 0.5s'
-        }}
-      />
+      <div style={{ position: 'relative', width: '100%', flex: 1, minHeight: '400px' }}>
+        <video 
+          ref={videoRef} 
+          autoPlay 
+          playsInline 
+          muted 
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            opacity: hasPermission ? 1 : 0,
+            transition: 'opacity 0.5s'
+          }}
+        />
+        <canvas 
+          ref={overlayRef} 
+          style={{ 
+            position: 'absolute', 
+            top: 0, 
+            left: 0, 
+            width: '100%', 
+            height: '100%', 
+            objectFit: 'cover', 
+            pointerEvents: 'none',
+            opacity: hasPermission ? 1 : 0,
+            zIndex: 10
+          }} 
+        />
+      </div>
       <canvas ref={canvasRef} style={{ display: 'none' }} />
 
       {hasPermission && (
@@ -192,49 +265,37 @@ export function WebcamDetection({ onDetection, isDetecting, cameraId = 1, device
             </div>
           )}
 
-          {lastResult && lastResult !== 'none_detected' && !isProcessing && (
-            <div className="status-badge" style={{ 
-              backgroundColor: lastResult === 'spoof' ? 'var(--danger)' : lastResult === 'unknown' ? 'var(--text-secondary)' : 'var(--accent-secondary)', 
-              color: 'white' 
-            }}>
-              {lastResult === 'spoof' ? (
-                 <AlertCircle style={{ width: '1rem', height: '1rem' }} />
-              ) : lastResult === 'male' ? (
-                 <User style={{ width: '1rem', height: '1rem' }} />
-              ) : (
-                 <UserRound style={{ width: '1rem', height: '1rem' }} />
-              )}
-              {lastResult === 'spoof' 
-                ? "SUPLANTACIÓN (FOTO)" 
-                : lastResult === 'unknown'
-                  ? "ROSTRO BORROSO"
-                  : lastResult === 'male' 
-                    ? "HOMBRE DETECTADO" 
-                    : "MUJER DETECTADA"
-              }
+          {lastResult && Array.isArray(lastResult) && lastResult.length > 0 && !isProcessing && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+              {lastResult.map((det, idx) => (
+                <div key={idx} className="status-badge" style={{ 
+                  backgroundColor: det.gender === 'spoof' ? 'var(--danger)' : det.gender === 'unknown' ? 'var(--text-secondary)' : 'var(--accent-secondary)', 
+                  color: 'white',
+                  fontSize: '0.8rem'
+                }}>
+                  {det.gender === 'spoof' ? (
+                     <AlertCircle style={{ width: '1rem', height: '1rem' }} />
+                  ) : det.gender === 'male' ? (
+                     <User style={{ width: '1rem', height: '1rem' }} />
+                  ) : (
+                     <UserRound style={{ width: '1rem', height: '1rem' }} />
+                  )}
+                  {det.gender === 'spoof' 
+                    ? "SUPLANTACIÓN (FOTO)" 
+                    : det.gender === 'unknown'
+                      ? "ROSTRO BORROSO"
+                      : det.gender === 'male' 
+                        ? `HOMBRE DETECTADO (${Math.round(det.confidence * 100)}%)` 
+                        : `MUJER DETECTADA (${Math.round(det.confidence * 100)}%)`
+                  }
+                </div>
+              ))}
             </div>
           )}
         </div>
       )}
 
-      <div style={{ position: 'absolute', bottom: '1rem', right: '1rem', zIndex: 20 }}>
-        <button 
-          className="btn"
-          style={{ 
-            borderRadius: '50%', 
-            width: '3rem', 
-            height: '3rem', 
-            padding: 0,
-            backgroundColor: 'rgba(15, 23, 42, 0.8)',
-            border: '1px solid var(--border-subtle)',
-            backdropFilter: 'blur(4px)'
-          }}
-          onClick={hasPermission ? stopCamera : startCamera}
-        >
-          {hasPermission ? <Camera style={{ width: '1.25rem', height: '1.25rem', color: 'white' }} /> : <CameraOff style={{ width: '1.25rem', height: '1.25rem', color: 'white' }} />}
-        </button>
-      </div>
-      
+
       <style>{`
         @keyframes spin {
           from { transform: rotate(0deg); }
