@@ -264,19 +264,6 @@ export default function Login({ onLogin, onNavigate }) {
     setFaceStatus('idle')
   }
 
-  // Ocultar el salto del bucle de video haciendo un fade out al final y fade in al inicio
-  const handleVideoTimeUpdate = (e) => {
-    const video = e.target;
-    if (!video.duration) return;
-    
-    // Si queda menos de 0.8 segundos, inicia el fade out a opacity 0
-    if (video.duration - video.currentTime < 0.8) {
-      video.style.opacity = 0;
-    } else {
-      // De lo contrario, lo mantiene o recupera a 1
-      video.style.opacity = 1;
-    }
-  };
 
   // Cleanup al desmontar
   useEffect(() => {
@@ -289,12 +276,11 @@ export default function Login({ onLogin, onNavigate }) {
 
   return (
     <div className="login-container">
-      {/* Fondo de video dinámico */}
-      <video 
+      {/* Fondo de imagen dinámica */}
+      <img 
         className="login-video-bg" 
-        autoPlay loop muted playsInline 
-        src="/video_fondo.mp4" 
-        onTimeUpdate={handleVideoTimeUpdate}
+        src="/fondo_onda_2.jpg" 
+        alt="Fondo BioFacial"
       />
       
       <div className="login-card">
