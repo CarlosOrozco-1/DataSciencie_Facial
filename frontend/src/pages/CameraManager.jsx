@@ -7,7 +7,7 @@ import { authFetch, API_URL } from '../utils/api'
 export default function CameraManager() {
   const [cameras, setCameras] = useState([])
   const [activeIds, setActiveIds] = useState([])
-  
+
   const [formData, setFormData] = useState({ name: '', location: '', url: '', hardware_label: '' })
   const [loading, setLoading] = useState(true)
   const [localDevices, setLocalDevices] = useState([])
@@ -19,10 +19,10 @@ export default function CameraManager() {
         authFetch(`${API_URL}/api/cameras/`),
         authFetch(`${API_URL}/api/processing/status`)
       ])
-      
+
       const camData = await camRes.json()
       const statData = await statRes.json()
-      
+
       setCameras(camData)
       setActiveIds(statData.active_cameras.map(c => c.camera_id))
     } catch (e) {
@@ -44,7 +44,7 @@ export default function CameraManager() {
       setLocalDevices(videoDevices)
       if (videoDevices.length > 0) {
         // En lugar de usar deviceId inseguro, usamos la nueva lógica normalizada:
-        setFormData(prev => ({...prev, url: 'LOCAL_USB', hardware_label: videoDevices[0].label || 'Dispositivo Desconocido'}))
+        setFormData(prev => ({ ...prev, url: 'LOCAL_USB', hardware_label: videoDevices[0].label || 'Dispositivo Desconocido' }))
       }
     } catch (err) {
       alert("No se pudo acceder a las cámaras. Verifique los permisos.")
@@ -102,7 +102,7 @@ export default function CameraManager() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '2rem' }}>
-      
+
       <div>
         <h1 className="page-title">Gestión de Cámaras</h1>
         <p className="page-subtitle">Añade o manipula las cámaras instaladas en el circuito. Los IDs USB típicamente son 0, 1 o secuencias rtsp://</p>
@@ -110,28 +110,28 @@ export default function CameraManager() {
 
       <form onSubmit={handleAddCamera} className="card" style={{ maxWidth: '600px' }}>
         <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem' }}>Añadir Nueva Cámara</h2>
-        
+
         <div>
           <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Nombre de la Cámara</label>
-          <input 
-            type="text" 
-            required 
+          <input
+            type="text"
+            required
             placeholder="Ej: Entrada Principal"
             value={formData.name}
-            onChange={(e) => setFormData({...formData, name: e.target.value})}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           />
         </div>
-        
+
         <div>
           <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Ubicación</label>
-          <input 
-            type="text" 
+          <input
+            type="text"
             placeholder="Ej: Lobby Norte"
             value={formData.location}
-            onChange={(e) => setFormData({...formData, location: e.target.value})}
+            onChange={(e) => setFormData({ ...formData, location: e.target.value })}
           />
         </div>
-        
+
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '0.5rem' }}>
             <label style={{ display: 'block', color: 'var(--text-secondary)' }}>URL o ID del Dispositivo</label>
@@ -139,16 +139,16 @@ export default function CameraManager() {
               🔍 Detectar USB
             </button>
           </div>
-          
+
           {localDevices.length > 0 ? (
-            <select 
+            <select
               value={formData.url === 'CUSTOM' ? 'CUSTOM' : (formData.hardware_label || formData.url)}
               onChange={(e) => {
                 const val = e.target.value;
                 if (val === 'CUSTOM') {
-                  setFormData({...formData, url: '', hardware_label: ''});
+                  setFormData({ ...formData, url: '', hardware_label: '' });
                 } else {
-                  setFormData({...formData, url: 'LOCAL_USB', hardware_label: val});
+                  setFormData({ ...formData, url: 'LOCAL_USB', hardware_label: val });
                 }
               }}
               required
@@ -166,17 +166,17 @@ export default function CameraManager() {
             </select>
           ) : null}
 
-          {(localDevices.length === 0 || !formData.hardware_label) && (formData.url !== 'LOCAL_USB') && (
-            <input 
-              type="text" 
-              required 
+          {(localDevices.length === 0 || !formData.hardware_label) && (formData.url !== 'LOCAL_USB') && ( //cambiar texto, no todas las camaras son usb
+            <input
+              type="text"
+              required
               placeholder="rtsp://... o ID web"
               value={formData.url === 'CUSTOM' ? '' : formData.url}
-              onChange={(e) => setFormData({...formData, url: e.target.value, hardware_label: ''})}
+              onChange={(e) => setFormData({ ...formData, url: e.target.value, hardware_label: '' })}
             />
           )}
         </div>
-        
+
         <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }}>
           ➕ Guardar Cámara
         </button>
@@ -192,15 +192,15 @@ export default function CameraManager() {
                 <div className="flex-between">
                   <h3 style={{ margin: 0, fontSize: '1.1rem' }}>{cam.name}</h3>
                 </div>
-                
+
                 <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.9rem' }}>📍 {cam.location || 'Sin Ubicación'}</p>
                 <code style={{ fontSize: '0.8rem', color: 'var(--accent-secondary)', backgroundColor: 'rgba(0,0,0,0.3)', padding: '4px', borderRadius: '4px', wordBreak: 'break-all' }}>
                   {cam.url}
                 </code>
-                
+
                 <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', justifyContent: 'flex-end' }}>
-                  <button 
-                    className="btn btn-danger" 
+                  <button
+                    className="btn btn-danger"
                     style={{ padding: '0.5rem' }}
                     onClick={() => handleDeleteRequest(cam.id)}
                     title="Eliminar Cámara"

@@ -9,7 +9,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
-  User
+  User,
+  Download
 } from 'lucide-react'
 
 export default function DetectionsManager() {
@@ -118,6 +119,31 @@ export default function DetectionsManager() {
     setPage(0)
   }
 
+  const handleExportCSV = () => {
+    const headers = ['ID', 'Fecha/Hora', 'Camara', 'Genero', 'Confianza']
+    const rows = detections.map(det => [
+      det.id,
+      new Date(det.timestamp).toLocaleString(),
+      getCameraName(det.camera_id),
+      det.gender === 'male' ? 'Hombre' : det.gender === 'female' ? 'Mujer' : det.gender === 'spoof' ? 'Suplantacion' : det.gender,
+      `${Math.round(det.confidence * 100)}%`
+    ])
+    
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n')
+    
+    const blob = new Blob(["\uFEFF"+csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement("a")
+    const url = URL.createObjectURL(blob)
+    link.setAttribute("href", url)
+    link.setAttribute("download", `detecciones_${selectedDate || 'todas'}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   if (loading) {
     return (
       <div className="flex-center" style={{ height: '80vh', flexDirection: 'column', gap: '1rem' }}>
@@ -220,6 +246,25 @@ export default function DetectionsManager() {
               <X size={14} /> Limpiar
             </button>
           )}
+
+          <button
+            onClick={handleExportCSV}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.5rem 1rem',
+              background: 'var(--success)',
+              border: 'none',
+              borderRadius: '8px',
+              color: 'white',
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              marginLeft: 'auto'
+            }}
+          >
+            <Download size={16} /> Exportar CSV
+          </button>
         </div>
       </div>
 

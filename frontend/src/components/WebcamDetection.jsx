@@ -1,15 +1,92 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { Camera, CameraOff, Loader2, User, UserRound, AlertCircle } from 'lucide-react';
+import { Camera, CameraOff, Loader2, User, UserRound, AlertCircle, Maximize, Minimize } from 'lucide-react';
 import { authFetch, API_URL } from '../utils/api';
+
+const playBeep = (type) => {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    
+    osc.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    
+    if (type === 'success') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1046.50, ctx.currentTime); // C6 - más agudo y notorio
+      gainNode.gain.setValueAtTime(0.3, ctx.currentTime); // Volumen inicial más alto
+      gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2); // Más largo
+      osc.start();
+      osc.stop(ctx.currentTime + 0.2);
+    } else if (type === 'error') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(150, ctx.currentTime);
+      gainNode.gain.setValueAtTime(0.1, ctx.currentTime);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.15);
+      
+      setTimeout(() => {
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.type = 'sawtooth';
+        osc2.frequency.setValueAtTime(150, ctx.currentTime);
+        gain2.gain.setValueAtTime(0.1, ctx.currentTime);
+        osc2.start();
+        osc2.stop(ctx.currentTime + 0.2);
+      }, 200);
+    }
+  } catch (e) {
+    console.error("Audio beep error:", e);
+  }
+};
 
 export function WebcamDetection({ onDetection, isDetecting, cameraId = 1, deviceId, hardwareLabel }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
-  const overlayRef = useRef(null);
+  const containerRef = useRef(null);
+  const prevResultRef = useRef(null);
   const [hasPermission, setHasPermission] = useState(null);
   const [cameraError, setCameraError] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [lastResult, setLastResult] = useState(null);
+  const [videoDims, setVideoDims] = useState({ width: 1280, height: 720 });
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      containerRef.current?.requestFullscreen().catch(err => {
+        console.error(`Error attempting to enable fullscreen: ${err.message}`);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  useEffect(() => {
+    if (lastResult && lastResult.length > 0) {
+      const prev = prevResultRef.current;
+      const hasSpoof = lastResult.some(d => d.gender === 'spoof');
+      const hadSpoof = prev && prev.some(d => d.gender === 'spoof');
+      const wasEmpty = !prev || prev.length === 0;
+
+      if (wasEmpty) {
+        playBeep(hasSpoof ? 'error' : 'success');
+      } else if (hasSpoof && !hadSpoof) {
+        playBeep('error');
+      }
+    }
+    prevResultRef.current = lastResult;
+  }, [lastResult]);
 
   const startCamera = async () => {
     stopCamera(); // Detener cualquier stream anterior
@@ -115,12 +192,10 @@ export function WebcamDetection({ onDetection, isDetecting, cameraId = 1, device
         const result = await response.json();
         if (result.detections && result.detections.length > 0) {
           setLastResult(result.detections);
-          drawBoundingBoxes(result.detections);
           // Por retrocompatibilidad, pasamos el primero o un resumen
           onDetection(result.detections[0].gender);
         } else {
           setLastResult([]);
-          drawBoundingBoxes([]);
           onDetection('none_detected');
         }
       } catch (error) {
@@ -141,58 +216,13 @@ export function WebcamDetection({ onDetection, isDetecting, cameraId = 1, device
     if (isDetecting) {
       interval = setInterval(() => {
         captureAndDetect();
-      }, 3000); // 3 seconds interval is fine for local backend
+      }, 800); // Polling más rápido (800ms) para un seguimiento más fluido
     }
     return () => clearInterval(interval);
   }, [isDetecting, captureAndDetect]);
 
-  const drawBoundingBoxes = useCallback((detections) => {
-    if (!overlayRef.current || !videoRef.current) return;
-    const canvas = overlayRef.current;
-    const video = videoRef.current;
-    const ctx = canvas.getContext('2d');
-    
-    if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-    }
-    
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    if (!detections || detections.length === 0) return;
-    
-    detections.forEach(det => {
-      if (det.box) {
-        const [x, y, w, h] = det.box;
-        ctx.strokeStyle = det.gender === 'spoof' ? '#ef4444' : '#10b981';
-        ctx.lineWidth = 4;
-        ctx.strokeRect(x, y, w, h);
-        
-        ctx.fillStyle = det.gender === 'spoof' ? 'rgba(239, 68, 68, 0.9)' : 'rgba(16, 185, 129, 0.9)';
-        let labelText = '';
-        if (det.gender === 'spoof') {
-            labelText = 'FOTO/SUPLANTACIÓN';
-        } else if (det.gender === 'male') {
-            labelText = 'HOMBRE';
-        } else if (det.gender === 'female') {
-            labelText = 'MUJER';
-        } else {
-            labelText = 'DESCONOCIDO';
-        }
-        
-        const text = det.gender === 'spoof' ? labelText : `${labelText} ${Math.round(det.confidence * 100)}%`;
-        ctx.font = 'bold 16px Inter, sans-serif';
-        const textWidth = ctx.measureText(text).width;
-        ctx.fillRect(x, y > 24 ? y - 24 : y, textWidth + 10, 24);
-        
-        ctx.fillStyle = 'white';
-        ctx.fillText(text, x + 5, y > 24 ? y - 6 : y + 18);
-      }
-    });
-  }, []);
-
   return (
-    <div className="card" style={{ position: 'relative', overflow: 'hidden', minHeight: '400px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 0, backgroundColor: 'var(--bg-card)' }}>
+    <div ref={containerRef} className="card" style={{ position: 'relative', overflow: 'hidden', minHeight: '400px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 0, backgroundColor: 'var(--bg-card)' }}>
       {cameraError ? (
          <div style={{ padding: '2rem', textAlign: 'center' }}>
            <span style={{ fontSize: '3rem', display: 'block', marginBottom: '1rem' }}>⚠️</span>
@@ -217,6 +247,14 @@ export function WebcamDetection({ onDetection, isDetecting, cameraId = 1, device
           autoPlay 
           playsInline 
           muted 
+          onLoadedMetadata={() => {
+            if (videoRef.current) {
+              setVideoDims({
+                width: videoRef.current.videoWidth,
+                height: videoRef.current.videoHeight
+              });
+            }
+          }}
           style={{
             position: 'absolute',
             top: 0,
@@ -228,22 +266,85 @@ export function WebcamDetection({ onDetection, isDetecting, cameraId = 1, device
             transition: 'opacity 0.5s'
           }}
         />
-        <canvas 
-          ref={overlayRef} 
+        <svg 
           style={{ 
             position: 'absolute', 
             top: 0, 
             left: 0, 
             width: '100%', 
             height: '100%', 
-            objectFit: 'cover', 
             pointerEvents: 'none',
             opacity: hasPermission ? 1 : 0,
             zIndex: 10
-          }} 
-        />
+          }}
+          viewBox={`0 0 ${videoDims.width} ${videoDims.height}`}
+          preserveAspectRatio="xMidYMid slice"
+        >
+          {lastResult && Array.isArray(lastResult) && lastResult.map((det, idx) => {
+            if (!det.box) return null;
+            const [x, y, w, h] = det.box;
+            const isSpoof = det.gender === 'spoof';
+            const color = isSpoof ? '#ef4444' : '#10b981';
+            
+            let labelText = 'DESCONOCIDO';
+            if (isSpoof) labelText = 'FOTO/SUPLANTACIÓN';
+            else if (det.gender === 'male') labelText = 'HOMBRE';
+            else if (det.gender === 'female') labelText = 'MUJER';
+            
+            const text = isSpoof ? labelText : `${labelText} ${Math.round(det.confidence * 100)}%`;
+            
+            return (
+              <g key={idx}>
+                <rect 
+                  x={x} y={y} width={w} height={h} 
+                  fill="none" stroke={color} strokeWidth="4" 
+                  style={{ transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}
+                />
+                <foreignObject 
+                  x={x} y={y > 24 ? y - 24 : y} width={Math.max(w, 200)} height="24"
+                  style={{ transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', overflow: 'visible' }}
+                >
+                  <div style={{
+                    display: 'inline-block',
+                    background: isSpoof ? 'rgba(239, 68, 68, 0.9)' : 'rgba(16, 185, 129, 0.9)',
+                    color: 'white',
+                    fontWeight: 'bold',
+                    fontSize: '16px',
+                    fontFamily: 'Inter, sans-serif',
+                    padding: '2px 8px',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {text}
+                  </div>
+                </foreignObject>
+              </g>
+            );
+          })}
+        </svg>
       </div>
       <canvas ref={canvasRef} style={{ display: 'none' }} />
+
+      <button 
+        onClick={toggleFullscreen}
+        style={{
+          position: 'absolute',
+          top: '1rem',
+          right: '1rem',
+          zIndex: 30,
+          background: 'rgba(15, 23, 42, 0.6)',
+          border: '1px solid rgba(255,255,255,0.1)',
+          backdropFilter: 'blur(4px)',
+          color: 'white',
+          padding: '0.5rem',
+          borderRadius: '8px',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}
+      >
+        {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
+      </button>
 
       {hasPermission && (
         <div style={{ position: 'absolute', top: '1rem', left: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', zIndex: 20 }}>
