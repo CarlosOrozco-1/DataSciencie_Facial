@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from app.database.connection import init_db, SessionLocal
 from app.models import camera, detection, user
-from app.api import cameras, detections, processing, auth, users
+from app.api import cameras, detections, processing, auth, users, reports
 from app.core import security
 
 app = FastAPI(title="Facial Recognition API")
@@ -37,6 +37,7 @@ app.include_router(users.router)
 app.include_router(cameras.router)
 app.include_router(detections.router)
 app.include_router(processing.router)
+app.include_router(reports.router)
 
 @app.on_event("startup")
 def startup_event():

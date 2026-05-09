@@ -10,7 +10,8 @@ import {
   ChevronRight,
   Filter,
   User,
-  Download
+  Download,
+  Mail
 } from 'lucide-react'
 
 export default function DetectionsManager() {
@@ -24,6 +25,15 @@ export default function DetectionsManager() {
   const [editForm, setEditForm] = useState({ gender: '', confidence: '' })
   const [page, setPage] = useState(0)
   const limit = 20
+
+  // Estados para el reporte por correo
+  const [showReportModal, setShowReportModal] = useState(false)
+  const [reportConfig, setReportConfig] = useState({
+    email: '',
+    format: 'pdf',
+    message: ''
+  })
+  const [sendingReport, setSendingReport] = useState(false)
 
   const fetchDetections = async () => {
     try {
@@ -144,6 +154,48 @@ export default function DetectionsManager() {
     document.body.removeChild(link)
   }
 
+  const handleSendReport = async (e) => {
+    e.preventDefault()
+    if (!reportConfig.email) {
+      alert('Por favor ingresa un correo electrónico')
+      return
+    }
+
+    setSendingReport(true)
+    try {
+      // Preparamos los filtros actuales para enviarlos al backend
+      const payload = {
+        email: reportConfig.email,
+        format: reportConfig.format,
+        message: reportConfig.message,
+        camera_id: cameraFilter ? parseInt(cameraFilter) : null,
+        gender: genderFilter || null,
+        start_date: selectedDate ? `${selectedDate}T00:00:00` : null,
+        end_date: selectedDate ? `${selectedDate}T23:59:59` : null
+      }
+
+      const res = await authFetch(`${API_URL}/api/reports/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        alert(data.message || 'Reporte enviado con éxito')
+        setShowReportModal(false)
+      } else {
+        const err = await res.json()
+        alert(`Error: ${err.detail || 'No se pudo enviar el reporte'}`)
+      }
+    } catch (error) {
+      console.error('Error enviando reporte:', error)
+      alert('Error de conexión al intentar enviar el reporte')
+    } finally {
+      setSendingReport(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex-center" style={{ height: '80vh', flexDirection: 'column', gap: '1rem' }}>
@@ -246,6 +298,25 @@ export default function DetectionsManager() {
               <X size={14} /> Limpiar
             </button>
           )}
+
+          <button
+            onClick={() => setShowReportModal(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.5rem 1rem',
+              background: 'var(--accent-primary)',
+              border: 'none',
+              borderRadius: '8px',
+              color: 'white',
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              marginLeft: '1rem'
+            }}
+          >
+            <Mail size={16} /> Enviar Reporte
+          </button>
 
           <button
             onClick={handleExportCSV}
@@ -430,6 +501,140 @@ export default function DetectionsManager() {
           Siguiente <ChevronRight size={18} />
         </button>
       </div>
+
+      {/* Modal para Envío de Reporte */}
+      {showReportModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.7)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          animation: 'fadeIn 0.2s ease-out'
+        }}>
+          <div className="card" style={{ width: '100%', maxWidth: '450px', padding: '2rem', position: 'relative' }}>
+            <button 
+              onClick={() => setShowReportModal(false)}
+              style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+            >
+              <X size={20} />
+            </button>
+
+            <h2 style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <Mail style={{ color: 'var(--accent-primary)' }} /> 
+              Enviar Reporte
+            </h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+              El reporte incluirá los datos filtrados actualmente.
+            </p>
+
+            <form onSubmit={handleSendReport}>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: 600 }}>Correo de Destino</label>
+                <input
+                  type="email"
+                  required
+                  placeholder="ejemplo@correo.com"
+                  value={reportConfig.email}
+                  onChange={(e) => setReportConfig({ ...reportConfig, email: e.target.value })}
+                  style={{
+                    width: '100%',
+                    background: 'var(--bg-input)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: '8px',
+                    padding: '0.75rem',
+                    color: 'var(--text-primary)'
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: 600 }}>Formato del Reporte</label>
+                <div style={{ display: 'flex', gap: '1rem' }}>
+                  <label style={{ flex: 1, cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="format"
+                      value="pdf"
+                      checked={reportConfig.format === 'pdf'}
+                      onChange={(e) => setReportConfig({ ...reportConfig, format: e.target.value })}
+                      style={{ marginRight: '0.5rem' }}
+                    />
+                    PDF
+                  </label>
+                  <label style={{ flex: 1, cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="format"
+                      value="excel"
+                      checked={reportConfig.format === 'excel'}
+                      onChange={(e) => setReportConfig({ ...reportConfig, format: e.target.value })}
+                      style={{ marginRight: '0.5rem' }}
+                    />
+                    Excel
+                  </label>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: 600 }}>Mensaje (Opcional)</label>
+                <textarea
+                  placeholder="Escribe un mensaje para incluir en el correo..."
+                  value={reportConfig.message}
+                  onChange={(e) => setReportConfig({ ...reportConfig, message: e.target.value })}
+                  style={{
+                    width: '100%',
+                    background: 'var(--bg-input)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: '8px',
+                    padding: '0.75rem',
+                    color: 'var(--text-primary)',
+                    minHeight: '80px',
+                    resize: 'vertical'
+                  }}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={sendingReport}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  background: 'var(--accent-primary)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontWeight: 600,
+                  cursor: sendingReport ? 'not-allowed' : 'pointer',
+                  opacity: sendingReport ? 0.7 : 1,
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                {sendingReport ? (
+                  <>
+                    <div className="animate-spin" style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%' }} />
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    <Check size={18} /> Enviar Reporte Ahora
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -3,6 +3,7 @@ import os
 import logging
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.application import MIMEApplication
 
 logger = logging.getLogger(__name__)
 
@@ -23,11 +24,11 @@ def _is_smtp_configured() -> bool:
     return True
 
 
-def _send_email(to_email: str, subject: str, html_body: str, text_body: str) -> bool:
+def _send_email(to_email: str, subject: str, html_body: str, text_body: str, attachments: list = None) -> bool:
     """Función base para enviar correos via SMTP con TLS.
     
     Maneja la conexión SMTP, autenticación y envío.
-    Loguea errores detallados para debugging.
+    Soporta una lista opcional de adjuntos: [(filename, content, mimetype), ...]
     """
     if not _is_smtp_configured():
         print(f"⚠️ Correo NO enviado a {to_email} (SMTP no configurado)")
@@ -41,6 +42,13 @@ def _send_email(to_email: str, subject: str, html_body: str, text_body: str) -> 
         
         msg.attach(MIMEText(text_body, "plain"))
         msg.attach(MIMEText(html_body, "html"))
+        
+        # Procesar adjuntos si existen
+        if attachments:
+            for filename, content, mimetype in attachments:
+                part = MIMEApplication(content)
+                part.add_header('Content-Disposition', 'attachment', filename=filename)
+                msg.attach(part)
         
         print(f"📧 Conectando a {SMTP_HOST}:{SMTP_PORT}...")
         
@@ -156,3 +164,48 @@ def send_welcome_email(to_email: str, username: str, auth_method: str = "Google"
     text_body = f"Bienvenido a BioFacial, {username}!\n\nTu cuenta ha sido creada via {auth_method}.\nEmail: {to_email}\n\nAccede en: {login_link}"
     
     return _send_email(to_email, subject, html_body, text_body)
+
+
+def send_report_email(to_email: str, filename: str, content: bytes, file_format: str, message: str = "") -> bool:
+    """Envía un reporte generado (PDF o Excel) por correo electrónico.
+    
+    Incluye un mensaje con la fecha y hora de entrega.
+    """
+    from datetime import datetime
+    now = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+    
+    subject = f"📊 Reporte de Detecciones - BioFacial ({file_format.upper()})"
+    
+    # Cuerpo del correo con el mensaje y timestamp
+    html_body = f"""
+    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #1e293b; border-radius: 12px; padding: 2rem; color: #f8fafc;">
+        <div style="text-align: center; margin-bottom: 1.5rem;">
+            <h1 style="color: #38bdf8; margin: 0;">📊 Reporte BioFacial</h1>
+            <p style="color: #94a3b8; margin-top: 0.25rem;">Sistema de Monitoreo Facial</p>
+        </div>
+        
+        <p>Hola,</p>
+        <p>Se ha generado un nuevo reporte de detecciones solicitado desde el panel administrativo.</p>
+        
+        <div style="background: #334155; border-radius: 8px; padding: 1rem; margin: 1.5rem 0;">
+            <p style="margin: 0; font-size: 0.95rem; color: #38bdf8;"><strong>Detalles de la entrega:</strong></p>
+            <p style="margin: 0.5rem 0 0; color: #f8fafc; font-size: 0.9rem;">📅 Fecha y Hora: {now}</p>
+            <p style="margin: 0.25rem 0 0; color: #f8fafc; font-size: 0.9rem;">📎 Formato: {file_format.upper()}</p>
+            {f'<p style="margin: 1rem 0 0; font-style: italic; color: #94a3b8;">" {message} "</p>' if message else ""}
+        </div>
+        
+        <p>Encontrarás el reporte adjunto a este correo.</p>
+        
+        <hr style="border: 1px solid #334155; margin: 1.5rem 0;">
+        <p style="color: #64748b; font-size: 0.75rem; text-align: center;">BioFacial © 2026 — Reporte Generado Automáticamente</p>
+    </div>
+    """
+    
+    text_body = f"Reporte de Detecciones BioFacial\nFecha/Hora: {now}\nFormato: {file_format.upper()}\n\n{message}"
+    
+    # Definir el MIME type basado en el formato
+    mimetype = "application/pdf" if file_format.lower() == "pdf" else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    
+    attachments = [(filename, content, mimetype)]
+    
+    return _send_email(to_email, subject, html_body, text_body, attachments=attachments)
