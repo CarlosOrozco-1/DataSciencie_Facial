@@ -299,43 +299,43 @@ export default function DetectionsManager() {
             </button>
           )}
 
-          <button
-            onClick={() => setShowReportModal(true)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.5rem 1rem',
-              background: 'var(--accent-primary)',
-              border: 'none',
-              borderRadius: '8px',
-              color: 'white',
-              fontSize: '0.85rem',
-              cursor: 'pointer',
-              marginLeft: '1rem'
-            }}
-          >
-            <Mail size={16} /> Enviar Reporte
-          </button>
+          <div style={{ display: 'flex', gap: '0.5rem', marginLeft: 'auto' }}>
+            <button
+              onClick={() => setShowReportModal(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.5rem 1rem',
+                background: 'var(--accent-primary)',
+                border: 'none',
+                borderRadius: '8px',
+                color: 'white',
+                fontSize: '0.85rem',
+                cursor: 'pointer'
+              }}
+            >
+              <Mail size={16} /> Enviar Reporte
+            </button>
 
-          <button
-            onClick={handleExportCSV}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.5rem 1rem',
-              background: 'var(--success)',
-              border: 'none',
-              borderRadius: '8px',
-              color: 'white',
-              fontSize: '0.85rem',
-              cursor: 'pointer',
-              marginLeft: 'auto'
-            }}
-          >
-            <Download size={16} /> Exportar CSV
-          </button>
+            <button
+              onClick={handleExportCSV}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.5rem 1rem',
+                background: 'var(--success)',
+                border: 'none',
+                borderRadius: '8px',
+                color: 'white',
+                fontSize: '0.85rem',
+                cursor: 'pointer'
+              }}
+            >
+              <Download size={16} /> Exportar CSV
+            </button>
+          </div>
         </div>
       </div>
 
