@@ -15,7 +15,11 @@ FILES = {
     
     # Gender Estimator (Gil Levi & Tal Hassner)
     "deploy_gender.prototxt": "https://raw.githubusercontent.com/GilLevi/AgeGenderDeepLearning/master/models/deploy_gender.prototxt",
-    "gender_net.caffemodel": "https://github.com/GilLevi/AgeGenderDeepLearning/raw/master/models/gender_net.caffemodel"
+    "gender_net.caffemodel": "https://github.com/GilLevi/AgeGenderDeepLearning/raw/master/models/gender_net.caffemodel",
+    
+    # Age Estimator (Gil Levi & Tal Hassner)
+    "deploy_age.prototxt": "https://raw.githubusercontent.com/GilLevi/AgeGenderDeepLearning/master/age_net_definitions/deploy.prototxt",
+    "age_net.caffemodel": "https://github.com/GilLevi/AgeGenderDeepLearning/raw/master/models/age_net.caffemodel"
 }
 
 def download_models():

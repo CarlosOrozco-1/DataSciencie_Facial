@@ -12,12 +12,28 @@ import base64
 import cv2
 import numpy as np
 import logging
+import sys
+import os
+from pathlib import Path
+root_dir = str(Path(__file__).resolve().parent.parent.parent)
+if root_dir not in sys.path:
+    sys.path.append(root_dir)
+
 from backend.vision.detector import FaceDetector
-from backend.vision.estimator import GenderEstimator
+from backend.vision.estimator import FaceAttributesEstimator
+from backend.vision.face_auth import FaceAuthenticator
+from app.models.person import RegisteredPerson
+import hashlib
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 detector = FaceDetector()
-estimator = GenderEstimator()
+estimator = FaceAttributesEstimator()
+authenticator = FaceAuthenticator()
+
+class RegisterFaceRequest(BaseModel):
+    name: str
+    image_base64: str
 
 router = APIRouter(
     prefix="/api/detections", 
@@ -164,7 +180,32 @@ def analyze_frame(request: FrameAnalysisRequest, db: Session = Depends(get_db)):
                     continue
                 
                 gender, confidence = estimator.estimate_gender(roi)
-                detected_results.append({"gender": gender, "confidence": confidence, "box": box_list})
+                age, age_conf = estimator.estimate_age(roi)
+                
+                # Reconocimiento de identidad
+                person_name = None
+                embedding = authenticator.generate_embedding(roi)
+                
+                if embedding:
+                    registered_persons = db.query(RegisteredPerson).all()
+                    users_list = [(p, p.face_embedding) for p in registered_persons]
+                    
+                    match = authenticator.find_matching_user(embedding, users_list)
+                    if match:
+                        person_name = match[0].name
+                    else:
+                        hash_str = hashlib.md5(str(embedding).encode()).hexdigest()[:8]
+                        person_name = f"Anon-{hash_str}"
+                else:
+                    person_name = "Desconocido"
+
+                detected_results.append({
+                    "gender": gender, 
+                    "age": age,
+                    "person_name": person_name,
+                    "confidence": confidence, 
+                    "box": box_list
+                })
                 
                 # Guarda registro si hay una cámara y es una detección válida
                 if request.camera_id > 0:
@@ -173,6 +214,8 @@ def analyze_frame(request: FrameAnalysisRequest, db: Session = Depends(get_db)):
                         db_detection = Detection(
                             camera_id=request.camera_id,
                             gender=gender,
+                            age=age,
+                            person_name=person_name,
                             confidence=confidence
                         )
                         db.add(db_detection)
@@ -184,6 +227,39 @@ def analyze_frame(request: FrameAnalysisRequest, db: Session = Depends(get_db)):
         
     except Exception as e:
         logger.error(f"Error en analyze_frame: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/register_face")
+def register_face(request: RegisterFaceRequest, db: Session = Depends(get_db)):
+    try:
+        encoded_data = request.image_base64
+        if ',' in encoded_data:
+            encoded_data = encoded_data.split(',')[1]
+            
+        img_data = base64.b64decode(encoded_data)
+        nparr = np.frombuffer(img_data, np.uint8)
+        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        
+        if frame is None:
+            raise HTTPException(status_code=400, detail="Invalid image data")
+            
+        # Utilizamos la imagen completa (el rostro más grande será extraído)
+        embedding = authenticator.generate_embedding(frame)
+        
+        if not embedding:
+            raise HTTPException(status_code=400, detail="No se detectó un rostro válido en la imagen")
+            
+        new_person = RegisteredPerson(
+            name=request.name,
+            face_embedding=authenticator.embedding_to_json(embedding)
+        )
+        db.add(new_person)
+        db.commit()
+        db.refresh(new_person)
+        
+        return {"message": "Persona registrada exitosamente", "person_id": new_person.id, "name": new_person.name}
+    except Exception as e:
+        logger.error(f"Error registrando rostro: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.put("/{detection_id}", response_model=DetectionResponse)

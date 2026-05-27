@@ -5,6 +5,8 @@ from typing import Optional
 class DetectionBase(BaseModel):
     camera_id: int
     gender: str
+    age: Optional[str] = None
+    person_name: Optional[str] = None
     confidence: float
 
 class DetectionCreate(DetectionBase):
@@ -12,6 +14,8 @@ class DetectionCreate(DetectionBase):
 
 class DetectionUpdate(BaseModel):
     gender: Optional[str] = None
+    age: Optional[str] = None
+    person_name: Optional[str] = None
     confidence: Optional[float] = None
 
 class DetectionResponse(DetectionBase):

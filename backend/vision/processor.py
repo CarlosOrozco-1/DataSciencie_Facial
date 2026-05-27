@@ -4,8 +4,17 @@ import threading
 import time
 import logging
 from typing import Optional, Callable
+import sys
+import os
+from pathlib import Path
+root_dir = str(Path(__file__).resolve().parent.parent.parent)
+if root_dir not in sys.path:
+    sys.path.append(root_dir)
+
 from backend.vision.detector import FaceDetector
-from backend.vision.estimator import GenderEstimator
+from backend.vision.estimator import FaceAttributesEstimator
+from backend.vision.face_auth import FaceAuthenticator
+import hashlib
 
 # Configurar logging
 logger = logging.getLogger(__name__)
@@ -27,7 +36,8 @@ class VideoProcessor:
         self.password = password
         
         self.detector = FaceDetector()
-        self.estimator = GenderEstimator()
+        self.estimator = FaceAttributesEstimator()
+        self.authenticator = FaceAuthenticator()
         
         self.cap: Optional[cv2.VideoCapture] = None
         self.is_running = False
@@ -187,8 +197,21 @@ class VideoProcessor:
                 roi = self.detector.get_face_roi(frame, face_box)
                 
                 if roi is not None and roi.size > 0:
-                    gender, confidence = self.estimator.estimate_gender(roi)
+                    gender, gender_conf = self.estimator.estimate_gender(roi)
+                    age, age_conf = self.estimator.estimate_age(roi)
                     
+                    # Reconocimiento de identidad (Anónimo o Match)
+                    # Nota: Para coincidencia completa con la base de datos, 
+                    # requeriría una conexión a la BD aquí o que detections.py actualice las labels.
+                    # Por eficiencia en el procesamiento en vivo, solo asignamos el hash anónimo
+                    # si no queremos acoplar sqlalchemy a este hilo.
+                    embedding = self.authenticator.generate_embedding(roi)
+                    if embedding:
+                        hash_str = hashlib.md5(str(embedding).encode()).hexdigest()[:8]
+                        person_name = f"Anon-{hash_str}"
+                    else:
+                        person_name = "Desconocido"
+
                     # Preparar guardado en BD usando lógica debounce
                     is_new = True
                     for f in self.recent_faces:
@@ -198,19 +221,24 @@ class VideoProcessor:
                             # Actualizar tiempo para mantenerlo activo y actualizar centro
                             f['timestamp'] = current_time
                             f['center'] = (cx, cy)
+                            # Mantenemos el nombre anterior para fluidez visual si ya lo teníamos
+                            if 'person_name' in f:
+                                person_name = f['person_name']
                             break
                     
                     if is_new:
-                        self.recent_faces.append({'center': (cx, cy), 'timestamp': current_time})
+                        self.recent_faces.append({'center': (cx, cy), 'timestamp': current_time, 'person_name': person_name})
                         detection = {
                             "camera_id": self.camera_id,
                             "gender": gender,
-                            "confidence": confidence,
+                            "age": age,
+                            "person_name": person_name,
+                            "confidence": gender_conf,
                             "face_box": face_box
                         }
                         detections.append(detection)
                     
-                    label = f"{'Hombre' if gender == 'male' else 'Mujer'} {confidence:.0%}"
+                    label = f"{person_name} | {'H' if gender == 'male' else 'M'}, {age}"
                     faces_to_draw.append((x, y, w, h, gender, label))
                     
         except Exception as e:

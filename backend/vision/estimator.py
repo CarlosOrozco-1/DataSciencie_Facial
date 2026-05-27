@@ -9,9 +9,9 @@ try:
 except ImportError:
     ONNXRUNTIME_AVAILABLE = False
 
-class GenderEstimator:
+class FaceAttributesEstimator:
     """
-    Estimador de género usando OpenCV DNN Caffe y Liveness Detection
+    Estimador de género y edad usando OpenCV DNN Caffe y Liveness Detection
     """
     
     def __init__(self):
@@ -25,6 +25,17 @@ class GenderEstimator:
             self.gender_net = None
             
         self.gender_list = ['male', 'female']
+        
+        # Modelo de Edad
+        age_prototxt = os.path.join(model_dir, "deploy_age.prototxt")
+        age_weights = os.path.join(model_dir, "age_net.caffemodel")
+        if os.path.exists(age_prototxt) and os.path.exists(age_weights):
+            self.age_net = cv2.dnn.readNetFromCaffe(age_prototxt, age_weights)
+        else:
+            self.age_net = None
+            
+        self.age_list = ['(0-2)', '(4-6)', '(8-12)', '(15-20)', '(25-32)', '(38-43)', '(48-53)', '(60-100)']
+        
         self.MODEL_MEAN_VALUES = (78.4263377603, 87.7689143744, 114.895847746)
         
     def check_liveness(self, face_roi: np.ndarray) -> bool:
@@ -80,4 +91,31 @@ class GenderEstimator:
             return gender, confidence
         except Exception as e:
             print(f"Error en estimación DNN de género: {e}")
+            return "unknown", 0.0
+
+    def estimate_age(self, face_roi: np.ndarray) -> Tuple[str, float]:
+        """
+        Estima la edad usando ResNet Caffe desde el ROI extraído.
+        Retorna (rango_edad, confianza)
+        """
+        if face_roi is None or face_roi.size == 0 or getattr(self, 'age_net', None) is None:
+            return "unknown", 0.0
+            
+        try:
+            # Preprocesamiento: Mejorar contraste para ayudar al modelo Caffe
+            img_yuv = cv2.cvtColor(face_roi, cv2.COLOR_BGR2YUV)
+            img_yuv[:,:,0] = cv2.equalizeHist(img_yuv[:,:,0])
+            enhanced_roi = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)
+            
+            blob = cv2.dnn.blobFromImage(enhanced_roi, 1.0, (227, 227), self.MODEL_MEAN_VALUES, swapRB=False)
+            self.age_net.setInput(blob)
+            preds = self.age_net.forward()
+            
+            age_idx = preds[0].argmax()
+            age = self.age_list[age_idx]
+            confidence = float(preds[0].max())
+            
+            return age, confidence
+        except Exception as e:
+            print(f"Error en estimación DNN de edad: {e}")
             return "unknown", 0.0

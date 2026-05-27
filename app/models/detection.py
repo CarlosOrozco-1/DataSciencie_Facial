@@ -10,6 +10,8 @@ class Detection(Base):
     camera_id = Column(Integer, ForeignKey("cameras.id", ondelete="CASCADE"), nullable=False)
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
     gender = Column(String(20), nullable=False)
+    age = Column(String(20), nullable=True)
+    person_name = Column(String(100), nullable=True)
     confidence = Column(Float, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     

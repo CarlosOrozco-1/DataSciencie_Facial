@@ -266,7 +266,7 @@ def enroll_face(data: FaceEnrollRequest, current_user: User = Depends(get_curren
     genera embeddings para cada una y almacena el promedio en la BD."""
     
     from backend.vision.face_auth import FaceAuthenticator, FACE_RECOGNITION_AVAILABLE
-    from backend.vision.estimator import GenderEstimator
+    from backend.vision.estimator import FaceAttributesEstimator
     
     if not FACE_RECOGNITION_AVAILABLE:
         raise HTTPException(status_code=500, detail="face_recognition no está instalado en el servidor")
@@ -278,7 +278,7 @@ def enroll_face(data: FaceEnrollRequest, current_user: User = Depends(get_curren
         raise HTTPException(status_code=400, detail="Máximo 5 imágenes permitidas")
     
     authenticator = FaceAuthenticator()
-    estimator = GenderEstimator()
+    estimator = FaceAttributesEstimator()
     decoded_images = []
     
     for i, img_b64 in enumerate(data.images):
@@ -383,10 +383,10 @@ def face_login(data: FaceLoginRequest, db: Session = Depends(get_db)):
     
     # Verificar liveness (anti-spoofing)
     from backend.vision.detector import FaceDetector
-    from backend.vision.estimator import GenderEstimator
+    from backend.vision.estimator import FaceAttributesEstimator
     
     detector = FaceDetector()
-    estimator = GenderEstimator()
+    estimator = FaceAttributesEstimator()
     faces = detector.detect_faces(frame)
     
     if len(faces) == 0:
