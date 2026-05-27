@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+from sqlalchemy import func
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 from app.database.connection import get_db
 from app.models.detection import Detection
 from app.models.camera import Camera
@@ -30,6 +31,10 @@ logger = logging.getLogger(__name__)
 detector = FaceDetector()
 estimator = FaceAttributesEstimator()
 authenticator = FaceAuthenticator()
+
+# Caché en memoria para evitar conteos duplicados de la misma persona (Debounce por Identidad)
+recent_detections_cache = {}
+DEDUPLICATION_TIME_MINUTES = 5
 
 class RegisterFaceRequest(BaseModel):
     name: str
@@ -182,20 +187,47 @@ def analyze_frame(request: FrameAnalysisRequest, db: Session = Depends(get_db)):
                 gender, confidence = estimator.estimate_gender(roi)
                 age, age_conf = estimator.estimate_age(roi)
                 
-                # Reconocimiento de identidad
+                # Reconocimiento de identidad y Deduplicación basada en Embedding
                 person_name = None
-                embedding = authenticator.generate_embedding(roi)
+                embedding = authenticator.generate_embedding(frame, face_box=box_list)
+                current_time = datetime.utcnow()
+                is_duplicate = False
                 
                 if embedding:
-                    registered_persons = db.query(RegisteredPerson).all()
-                    users_list = [(p, p.face_embedding) for p in registered_persons]
+                    # 1. Comprobar en el caché de recientes (registrados y anónimos)
+                    for name, data in list(recent_detections_cache.items()):
+                        last_seen = data["last_seen"]
+                        if current_time - last_seen > timedelta(minutes=DEDUPLICATION_TIME_MINUTES):
+                            del recent_detections_cache[name] # Limpiar expirados
+                            continue
+                            
+                        is_match, dist = authenticator.compare_faces(data["embedding"], embedding)
+                        if is_match:
+                            person_name = name
+                            is_duplicate = True
+                            # Actualizamos embedding y timestamp
+                            recent_detections_cache[name]["embedding"] = embedding
+                            recent_detections_cache[name]["last_seen"] = current_time
+                            break
                     
-                    match = authenticator.find_matching_user(embedding, users_list)
-                    if match:
-                        person_name = match[0].name
-                    else:
-                        hash_str = hashlib.md5(str(embedding).encode()).hexdigest()[:8]
-                        person_name = f"Anon-{hash_str}"
+                    # 2. Si no está en caché (es una nueva persona en la escena)
+                    if not person_name:
+                        registered_persons = db.query(RegisteredPerson).all()
+                        users_list = [(p, p.face_embedding) for p in registered_persons]
+                        
+                        match = authenticator.find_matching_user(embedding, users_list)
+                        if match:
+                            person_name = match[0].name
+                        else:
+                            import time
+                            hash_str = hashlib.md5(str(time.time()).encode()).hexdigest()[:8]
+                            person_name = f"Anon-{hash_str}"
+                            
+                        # Guardar en caché para futuros frames
+                        recent_detections_cache[person_name] = {
+                            "embedding": embedding,
+                            "last_seen": current_time
+                        }
                 else:
                     person_name = "Desconocido"
 
@@ -204,11 +236,12 @@ def analyze_frame(request: FrameAnalysisRequest, db: Session = Depends(get_db)):
                     "age": age,
                     "person_name": person_name,
                     "confidence": confidence, 
-                    "box": box_list
+                    "box": box_list,
+                    "is_duplicate": is_duplicate
                 })
                 
-                # Guarda registro si hay una cámara y es una detección válida
-                if request.camera_id > 0:
+                # Guarda registro en BD solo si NO es un duplicado
+                if not is_duplicate and request.camera_id > 0:
                     camera = db.query(Camera).filter(Camera.id == request.camera_id).first()
                     if camera:
                         db_detection = Detection(

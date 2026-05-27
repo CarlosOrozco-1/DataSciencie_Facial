@@ -205,7 +205,8 @@ class VideoProcessor:
                     # requeriría una conexión a la BD aquí o que detections.py actualice las labels.
                     # Por eficiencia en el procesamiento en vivo, solo asignamos el hash anónimo
                     # si no queremos acoplar sqlalchemy a este hilo.
-                    embedding = self.authenticator.generate_embedding(roi)
+                    face_box_list = [int(v) for v in face_box]
+                    embedding = self.authenticator.generate_embedding(frame, face_box=face_box_list)
                     if embedding:
                         hash_str = hashlib.md5(str(embedding).encode()).hexdigest()[:8]
                         person_name = f"Anon-{hash_str}"

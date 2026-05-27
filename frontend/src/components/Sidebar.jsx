@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Camera, Settings, Activity, LogOut, Users, LayoutDashboard, Menu, User, Database } from 'lucide-react'
+import { Camera, Settings, Activity, LogOut, Users, LayoutDashboard, Menu, User, Database, UserPlus } from 'lucide-react'
 
 // Componente Sidebar con navegación, módulo de usuarios y botón de cierre de sesión JWT
 export default function Sidebar({ currentPage, setCurrentPage, onLogout }) {
@@ -84,6 +84,15 @@ export default function Sidebar({ currentPage, setCurrentPage, onLogout }) {
         >
           <Database size={20} style={{ minWidth: '20px' }} />
           {!isCollapsed && <span>Detecciones</span>}
+        </button>
+
+        <button
+          onClick={() => setCurrentPage('register')}
+          className={`nav-link ${currentPage === 'register' ? 'active' : ''}`}
+          title={isCollapsed ? 'Registro Facial' : ''}
+        >
+          <UserPlus size={20} style={{ minWidth: '20px' }} />
+          {!isCollapsed && <span>Registro Facial</span>}
         </button>
 
         <button

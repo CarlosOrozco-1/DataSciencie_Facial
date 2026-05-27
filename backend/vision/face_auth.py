@@ -33,11 +33,12 @@ class FaceAuthenticator:
         if not FACE_RECOGNITION_AVAILABLE:
             logger.warning("face_recognition no disponible. Autenticación facial deshabilitada.")
     
-    def generate_embedding(self, image: np.ndarray) -> Optional[List[float]]:
+    def generate_embedding(self, image: np.ndarray, face_box: Optional[List[int]] = None) -> Optional[List[float]]:
         """Genera un embedding facial de 128 dimensiones a partir de una imagen.
         
         Args:
-            image: Imagen BGR (formato OpenCV)
+            image: Imagen BGR (formato OpenCV). Puede ser el frame completo.
+            face_box: Opcional [x, y, w, h]. Si se provee, extrae el embedding directo de ahí sin redetectar.
             
         Returns:
             Lista de 128 floats representando la identidad del rostro, o None si no se detectó rostro.
@@ -48,17 +49,22 @@ class FaceAuthenticator:
         # Convertir BGR (OpenCV) a RGB (face_recognition)
         rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         
-        # Detectar ubicaciones de rostros
-        face_locations = face_recognition.face_locations(rgb_image, model="hog")
-        
-        if len(face_locations) == 0:
-            logger.warning("No se detectó ningún rostro en la imagen")
-            return None
-        
-        if len(face_locations) > 1:
-            logger.warning(f"Se detectaron {len(face_locations)} rostros. Usando el más grande.")
-            # Seleccionar el rostro más grande (mayor área)
-            face_locations = [max(face_locations, key=lambda f: (f[2] - f[0]) * (f[1] - f[3]))]
+        if face_box:
+            # face_recognition usa formato (top, right, bottom, left)
+            x, y, w, h = face_box
+            face_locations = [(max(0, y), min(rgb_image.shape[1], x+w), min(rgb_image.shape[0], y+h), max(0, x))]
+        else:
+            # Detectar ubicaciones de rostros
+            face_locations = face_recognition.face_locations(rgb_image, model="hog")
+            
+            if len(face_locations) == 0:
+                logger.warning("No se detectó ningún rostro en la imagen")
+                return None
+            
+            if len(face_locations) > 1:
+                logger.warning(f"Se detectaron {len(face_locations)} rostros. Usando el más grande.")
+                # Seleccionar el rostro más grande (mayor área)
+                face_locations = [max(face_locations, key=lambda f: (f[2] - f[0]) * (f[1] - f[3]))]
         
         # Generar embedding para el rostro detectado
         encodings = face_recognition.face_encodings(rgb_image, face_locations)
