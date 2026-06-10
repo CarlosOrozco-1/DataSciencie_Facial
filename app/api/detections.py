@@ -296,6 +296,24 @@ def register_face(request: RegisterFaceRequest, db: Session = Depends(get_db)):
         if not embedding:
             raise HTTPException(status_code=400, detail="No se pudo extraer un rostro válido de las imágenes capturadas. Intenta acercarte más a la cámara y buena iluminación.")
             
+        # 3. Detectar Rango de Edad (Para feedback en el registro)
+        age_range = "(Desconocida)"
+        try:
+            # Usar la primera imagen para extraer la edad
+            first_frame = frames[0]
+            rgb_image = cv2.cvtColor(first_frame, cv2.COLOR_BGR2RGB)
+            import face_recognition
+            face_locations = face_recognition.face_locations(rgb_image, model="hog")
+            if len(face_locations) > 0:
+                top, right, bottom, left = face_locations[0]
+                roi = first_frame[top:bottom, left:right]
+                from backend.vision.estimator import FaceAttributesEstimator
+                temp_estimator = FaceAttributesEstimator()
+                age, _ = temp_estimator.estimate_age(roi)
+                age_range = age
+        except Exception as e:
+            logger.warning(f"No se pudo estimar la edad en el registro: {e}")
+            
         # 2. Validar duplicidad de Rostro (Embedding)
         registered_persons = db.query(RegisteredPerson).all()
         users_list = [(p, p.face_embedding) for p in registered_persons]
@@ -313,7 +331,7 @@ def register_face(request: RegisterFaceRequest, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(new_person)
         
-        return {"message": "Persona registrada exitosamente", "person_id": new_person.id, "name": new_person.name}
+        return {"message": "Persona registrada exitosamente", "person_id": new_person.id, "name": new_person.name, "age": age_range}
     except Exception as e:
         logger.error(f"Error registrando rostro: {e}")
         raise HTTPException(status_code=500, detail=str(e))

@@ -122,7 +122,9 @@ export default function RegisterFace({ onNavigate, isPublic = false }) {
       // Finalización Exitosa
       setMeshState('CAPTURE_SUCCESS');
       setScanMessage('Perfil biométrico creado correctamente.');
-      setMessage({ type: 'success', text: `¡Registro exitoso! Identidad guardada como: ${data.name}` });
+      
+      const ageText = data.age && data.age !== "(Desconocida)" ? ` | Edad detectada: ${data.age}` : '';
+      setMessage({ type: 'success', text: `¡Registro exitoso! Identidad guardada como: ${data.name}${ageText}` });
       setName('');
       
       await delay(2000);
