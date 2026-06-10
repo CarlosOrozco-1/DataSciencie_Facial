@@ -367,6 +367,11 @@ export default function Login({ onLogin, onNavigate }) {
                 <Camera size={20} />
                 <span>Reconocimiento Facial</span>
               </button>
+              
+              {/* Registro Voluntario */}
+              <button type="button" className="login-btn-oval" onClick={() => onNavigate('register')} disabled={loading} title="Registrar Rostro Público" style={{ border: '1px solid rgba(255,255,255,0.2)', backgroundColor: 'transparent', color: 'var(--text-secondary)' }}>
+                <span style={{ marginLeft: '1.7rem' }}>Registro Voluntario Nuevo</span>
+              </button>
             </div>
           </>
         ) : (

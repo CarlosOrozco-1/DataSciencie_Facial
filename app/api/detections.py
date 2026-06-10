@@ -38,7 +38,7 @@ DEDUPLICATION_TIME_MINUTES = 5
 
 class RegisterFaceRequest(BaseModel):
     name: str
-    image_base64: str
+    images_base64: List[str]
 
 router = APIRouter(
     prefix="/api/detections", 
@@ -265,25 +265,43 @@ def analyze_frame(request: FrameAnalysisRequest, db: Session = Depends(get_db)):
 @router.post("/register_face")
 def register_face(request: RegisterFaceRequest, db: Session = Depends(get_db)):
     try:
-        encoded_data = request.image_base64
-        if ',' in encoded_data:
-            encoded_data = encoded_data.split(',')[1]
+        # 1. Validar duplicidad de Nombre
+        existing_user = db.query(RegisteredPerson).filter(func.lower(RegisteredPerson.name) == func.lower(request.name.strip())).first()
+        if existing_user:
+            raise HTTPException(status_code=400, detail="El nombre ingresado ya está registrado. Por favor, usa otro nombre o agrega un apellido.")
+
+        frames = []
+        for encoded_data in request.images_base64:
+            if ',' in encoded_data:
+                encoded_data = encoded_data.split(',')[1]
+                
+            img_data = base64.b64decode(encoded_data)
+            nparr = np.frombuffer(img_data, np.uint8)
+            frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
             
-        img_data = base64.b64decode(encoded_data)
-        nparr = np.frombuffer(img_data, np.uint8)
-        frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            if frame is not None:
+                frames.append(frame)
         
-        if frame is None:
+        if len(frames) == 0:
             raise HTTPException(status_code=400, detail="Invalid image data")
             
-        # Utilizamos la imagen completa (el rostro más grande será extraído)
-        embedding = authenticator.generate_embedding(frame)
+        # Utilizamos las imágenes completas para generar un embedding promedio robusto
+        embedding = authenticator.enroll_face(frames)
         
         if not embedding:
-            raise HTTPException(status_code=400, detail="No se detectó un rostro válido en la imagen")
+            raise HTTPException(status_code=400, detail="No se pudo extraer un rostro válido de las imágenes capturadas. Intenta acercarte más a la cámara y buena iluminación.")
+            
+        # 2. Validar duplicidad de Rostro (Embedding)
+        registered_persons = db.query(RegisteredPerson).all()
+        users_list = [(p, p.face_embedding) for p in registered_persons]
+        match = authenticator.find_matching_user(embedding, users_list)
+        
+        if match:
+            matched_name = match[0].name
+            raise HTTPException(status_code=400, detail=f"Este rostro ya se encuentra registrado en el sistema bajo el nombre de '{matched_name}'.")
             
         new_person = RegisteredPerson(
-            name=request.name,
+            name=request.name.strip(),
             face_embedding=authenticator.embedding_to_json(embedding)
         )
         db.add(new_person)

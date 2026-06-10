@@ -287,11 +287,22 @@ export function WebcamDetection({ onDetection, isDetecting, cameraId = 1, device
             const color = isSpoof ? '#ef4444' : '#10b981';
             
             let labelText = 'DESCONOCIDO';
-            if (isSpoof) labelText = 'FOTO/SUPLANTACIÓN';
-            else if (det.gender === 'male') labelText = 'HOMBRE';
-            else if (det.gender === 'female') labelText = 'MUJER';
+            let isRegistered = false;
             
-            const text = isSpoof ? labelText : `${labelText} ${Math.round(det.confidence * 100)}%`;
+            if (isSpoof) {
+              labelText = 'FOTO/SUPLANTACIÓN';
+            } else if (det.person_name && !det.person_name.startsWith('Anon-') && det.person_name !== 'Desconocido') {
+              labelText = det.person_name.toUpperCase();
+              isRegistered = true;
+            } else if (det.gender === 'male') {
+              labelText = 'HOMBRE';
+            } else if (det.gender === 'female') {
+              labelText = 'MUJER';
+            }
+            
+            // Si es registrado, mostramos solo el nombre (o nombre + edad si quisiéramos).
+            // Si no, mostramos el género y el nivel de confianza.
+            const text = isSpoof ? labelText : (isRegistered ? labelText : `${labelText} ${Math.round(det.confidence * 100)}%`);
             
             return (
               <g key={idx}>
@@ -385,9 +396,11 @@ export function WebcamDetection({ onDetection, isDetecting, cameraId = 1, device
                     ? "SUPLANTACIÓN (FOTO)" 
                     : det.gender === 'unknown'
                       ? "ROSTRO BORROSO"
-                      : det.gender === 'male' 
-                        ? `HOMBRE DETECTADO (${Math.round(det.confidence * 100)}%)` 
-                        : `MUJER DETECTADA (${Math.round(det.confidence * 100)}%)`
+                      : (det.person_name && !det.person_name.startsWith('Anon-') && det.person_name !== 'Desconocido')
+                        ? `IDENTIDAD: ${det.person_name.toUpperCase()}`
+                        : det.gender === 'male' 
+                          ? `HOMBRE DETECTADO (${Math.round(det.confidence * 100)}%)` 
+                          : `MUJER DETECTADA (${Math.round(det.confidence * 100)}%)`
                   }
                 </div>
               ))}

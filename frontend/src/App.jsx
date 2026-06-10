@@ -58,6 +58,8 @@ function App() {
         return <ForgotPassword onNavigate={handleAuthNavigate} />
       case 'reset':
         return <ResetPassword token={resetToken} onNavigate={handleAuthNavigate} />
+      case 'register':
+        return <RegisterFace onNavigate={handleAuthNavigate} isPublic={true} />
       default:
         return <Login onLogin={handleLogin} onNavigate={handleAuthNavigate} />
     }
