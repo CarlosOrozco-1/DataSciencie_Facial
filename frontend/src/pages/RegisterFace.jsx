@@ -8,10 +8,12 @@ export default function RegisterFace({ onNavigate, isPublic = false }) {
   
   const [name, setName] = useState('');
   const [isCameraActive, setIsCameraActive] = useState(false);
-  const [scanStatus, setScanStatus] = useState('idle'); // idle | scanning | processing | success | error
-  const [scanProgress, setScanProgress] = useState(0); // 0 to 100
-  const [scanMessage, setScanMessage] = useState('');
+  
+  // Estados requeridos por el protocolo
+  const [meshState, setMeshState] = useState('IDLE'); // IDLE | SCANNING | CAPTURE_SUCCESS | ERROR
+  const [scanMessage, setScanMessage] = useState('Centra tu rostro en el círculo');
   const [message, setMessage] = useState(null); // { type: 'success' | 'error', text: '' }
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const startCamera = async () => {
     try {
@@ -20,6 +22,8 @@ export default function RegisterFace({ onNavigate, isPublic = false }) {
         videoRef.current.srcObject = stream;
         setIsCameraActive(true);
         setMessage(null);
+        setMeshState('IDLE');
+        setScanMessage('Centra tu rostro y presiona Iniciar');
       }
     } catch (err) {
       console.error("Error accessing camera:", err);
@@ -36,7 +40,6 @@ export default function RegisterFace({ onNavigate, isPublic = false }) {
     setIsCameraActive(false);
   };
 
-  // Detener la cámara al desmontar
   useEffect(() => {
     return () => stopCamera();
   }, []);
@@ -53,6 +56,9 @@ export default function RegisterFace({ onNavigate, isPublic = false }) {
     return canvas.toDataURL('image/jpeg', 0.8);
   };
 
+  // Función asíncrona que simula una pausa
+  const delay = (ms) => new Promise(res => setTimeout(res, ms));
+
   const handleRegister = async () => {
     if (!name.trim()) {
       setMessage({ type: 'error', text: 'Por favor, ingresa el nombre de la persona.' });
@@ -63,36 +69,41 @@ export default function RegisterFace({ onNavigate, isPublic = false }) {
       return;
     }
 
-    setScanStatus('scanning');
+    setIsProcessing(true);
     setMessage(null);
-    setScanProgress(0);
 
     const capturedFrames = [];
-    const captureInstructions = [
-      "Mirando al frente...",
-      "Gira ligeramente a la derecha...",
-      "Gira ligeramente a la izquierda...",
-      "Mirando al frente nuevamente...",
-      "Finalizando escaneo..."
-    ];
 
-    // Tomar 5 fotos a lo largo de 4 segundos
-    for (let i = 0; i < 5; i++) {
-      setScanMessage(captureInstructions[i]);
-      setScanProgress((i / 5) * 100);
-      
-      const frame = captureFrame();
-      if (frame) capturedFrames.push(frame);
-
-      // Esperar 800ms entre foto y foto
-      await new Promise(resolve => setTimeout(resolve, 800));
-    }
-    
-    setScanProgress(100);
-    setScanStatus('processing');
-    setScanMessage("Procesando biometría y validando duplicados...");
-
+    // Protocolo de 4 capturas biométricas
     try {
+      for (let i = 1; i <= 4; i++) {
+        // Paso 1: Anuncia captura
+        setMeshState('IDLE');
+        setScanMessage(`Preparando captura ${i} de 4...`);
+        await delay(1000); // Tiempo para que el usuario se posicione
+
+        // Paso 2: Cambia a SCANNING
+        setMeshState('SCANNING');
+        setScanMessage(`Escaneando rostro... (${i}/4)`);
+        
+        // Simular escaneo de profundidad (láser visible)
+        await delay(1500);
+
+        // Paso 3: Lanza acción de captura
+        const frame = captureFrame();
+        if (!frame) throw new Error("Error al capturar la imagen del dispositivo.");
+        capturedFrames.push(frame);
+
+        // Paso 4: Captura Exitosa (Green)
+        setMeshState('CAPTURE_SUCCESS');
+        setScanMessage('¡Captura guardada!');
+        await delay(1000); // Congelar estado de éxito por 1 seg
+      }
+
+      // Procesamiento final en backend
+      setMeshState('SCANNING');
+      setScanMessage('Procesando vectores biométricos en la Base de Datos...');
+
       const response = await fetch(`${API_URL}/api/detections/register_face`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -108,18 +119,39 @@ export default function RegisterFace({ onNavigate, isPublic = false }) {
         throw new Error(data.detail || 'Ocurrió un error al registrar el rostro.');
       }
 
-      setScanStatus('success');
+      // Finalización Exitosa
+      setMeshState('CAPTURE_SUCCESS');
+      setScanMessage('Perfil biométrico creado correctamente.');
       setMessage({ type: 'success', text: `¡Registro exitoso! Identidad guardada como: ${data.name}` });
       setName('');
       
-      // Auto-apagar cámara después de éxito
-      setTimeout(() => stopCamera(), 3000);
+      await delay(2000);
+      stopCamera();
       
     } catch (error) {
-      setScanStatus('error');
+      setMeshState('ERROR');
+      setScanMessage('Error en la validación.');
       setMessage({ type: 'error', text: error.message });
+      await delay(2000);
+      setMeshState('IDLE');
+      setScanMessage('Centra tu rostro e intenta de nuevo');
+    } finally {
+      setIsProcessing(false);
     }
   };
+
+  // Determinar colores según estado de la malla
+  const getMeshColors = () => {
+    switch (meshState) {
+      case 'IDLE': return { main: '#E2E8F0', rgb: '226, 232, 240', animation: 'floating 4s infinite ease-in-out' };
+      case 'SCANNING': return { main: '#00F0FF', rgb: '0, 240, 255', animation: 'pulsing 0.5s infinite alternate' };
+      case 'CAPTURE_SUCCESS': return { main: '#00FF66', rgb: '0, 255, 102', animation: 'none' };
+      case 'ERROR': return { main: '#FF0033', rgb: '255, 0, 51', animation: 'blink 0.3s infinite alternate' };
+      default: return { main: '#FFFFFF', rgb: '255, 255, 255', animation: 'none' };
+    }
+  };
+
+  const meshConfig = getMeshColors();
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', maxWidth: '800px', margin: '0 auto', padding: '1rem' }}>
@@ -166,7 +198,7 @@ export default function RegisterFace({ onNavigate, isPublic = false }) {
               placeholder="Ej. Juan Pérez" 
               value={name}
               onChange={(e) => setName(e.target.value)}
-              disabled={scanStatus === 'scanning' || scanStatus === 'processing'}
+              disabled={isProcessing}
               style={{
                 width: '100%',
                 padding: '0.75rem 1rem',
@@ -179,7 +211,7 @@ export default function RegisterFace({ onNavigate, isPublic = false }) {
             />
           </div>
 
-          {/* Contenedor del video con silueta biométrica */}
+          {/* Contenedor del video con SIMULACIÓN DE MEDIA PIPE FACE MESH */}
           <div style={{ 
             width: '100%', 
             aspectRatio: '4/3', 
@@ -190,8 +222,8 @@ export default function RegisterFace({ onNavigate, isPublic = false }) {
             alignItems: 'center',
             justifyContent: 'center',
             position: 'relative',
-            border: scanStatus === 'scanning' ? '2px solid var(--accent-primary)' : '1px solid var(--border-subtle)',
-            boxShadow: scanStatus === 'scanning' ? '0 0 20px rgba(56, 189, 248, 0.3)' : 'none',
+            border: `2px solid ${meshConfig.main}`,
+            boxShadow: `0 0 20px rgba(${meshConfig.rgb}, 0.3)`,
             transition: 'all 0.3s ease'
           }}>
             {!isCameraActive && (
@@ -218,66 +250,59 @@ export default function RegisterFace({ onNavigate, isPublic = false }) {
             />
             <canvas ref={canvasRef} style={{ display: 'none' }} />
 
-            {/* OVERLAY BIOMÉTRICO (Silueta y Animación) */}
+            {/* OVERLAY DE ESTADOS (Malla simulada) */}
             {isCameraActive && (
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, pointerEvents: 'none' }}>
-                {/* Silueta de óvalo para guiar el rostro */}
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, pointerEvents: 'none', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                
+                {/* Overlay principal que oscurece los bordes */}
                 <div style={{
                   position: 'absolute',
-                  top: '50%',
-                  left: '50%',
-                  transform: 'translate(-50%, -50%)',
                   width: '60%',
-                  height: '70%',
-                  border: '2px dashed rgba(255,255,255,0.4)',
+                  height: '75%',
+                  border: `2px ${meshState === 'IDLE' ? 'dashed' : 'solid'} ${meshConfig.main}`,
                   borderRadius: '50%',
-                  boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.6)', // Oscurecer el exterior
-                }} />
+                  boxShadow: `0 0 0 9999px rgba(0, 0, 0, ${meshState === 'ERROR' ? 0.8 : 0.6})`,
+                  animation: meshConfig.animation,
+                  transition: 'border-color 0.3s ease'
+                }}>
+                  {/* Grid / Malla interna (CSS) */}
+                  <div className={`face-mesh-grid ${meshState}`} style={{ borderColor: `rgba(${meshConfig.rgb}, 0.3)` }}>
+                    {/* Nodos flotantes simulados */}
+                    {[...Array(12)].map((_, i) => (
+                       <div key={i} className={`mesh-node ${meshState}`} style={{ backgroundColor: meshConfig.main }} />
+                    ))}
+                  </div>
+                </div>
 
                 {/* Escáner láser al escanear */}
-                {scanStatus === 'scanning' && (
+                {meshState === 'SCANNING' && (
                   <div className="laser-scanner" />
                 )}
 
-                {/* Texto de instrucción superpuesto */}
-                {(scanStatus === 'scanning' || scanStatus === 'processing') && (
-                  <div style={{
-                    position: 'absolute',
-                    bottom: '10%',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    backgroundColor: 'rgba(15, 23, 42, 0.8)',
-                    padding: '0.5rem 1.5rem',
-                    borderRadius: '20px',
-                    color: 'white',
-                    fontWeight: 'bold',
-                    fontSize: '1.2rem',
-                    textAlign: 'center',
-                    border: '1px solid var(--accent-primary)',
-                    boxShadow: '0 4px 6px rgba(0,0,0,0.3)',
-                    zIndex: 20
-                  }}>
-                    {scanMessage}
-                  </div>
-                )}
+                {/* Texto de estado superpuesto */}
+                <div style={{
+                  position: 'absolute',
+                  bottom: '8%',
+                  backgroundColor: `rgba(${meshConfig.rgb}, 0.15)`,
+                  padding: '0.6rem 2rem',
+                  borderRadius: '30px',
+                  color: meshConfig.main,
+                  fontWeight: 'bold',
+                  fontSize: '1.2rem',
+                  textAlign: 'center',
+                  border: `1px solid ${meshConfig.main}`,
+                  backdropFilter: 'blur(4px)',
+                  boxShadow: `0 4px 15px rgba(${meshConfig.rgb}, 0.4)`,
+                  transition: 'all 0.3s ease'
+                }}>
+                  {scanMessage}
+                </div>
               </div>
             )}
           </div>
 
-          {/* Barra de progreso */}
-          {(scanStatus === 'scanning' || scanStatus === 'processing') && (
-            <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--border-subtle)', borderRadius: '4px', overflow: 'hidden' }}>
-              <div style={{ 
-                height: '100%', 
-                width: `${scanProgress}%`, 
-                backgroundColor: 'var(--accent-primary)',
-                transition: 'width 0.8s ease'
-              }} />
-            </div>
-          )}
-
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '0.5rem' }}>
-            {isCameraActive && scanStatus !== 'scanning' && scanStatus !== 'processing' && (
+            {isCameraActive && !isProcessing && (
               <button 
                 className="btn" 
                 onClick={stopCamera}
@@ -290,11 +315,11 @@ export default function RegisterFace({ onNavigate, isPublic = false }) {
             <button 
               className="btn btn-primary" 
               onClick={handleRegister}
-              disabled={!isCameraActive || scanStatus === 'scanning' || scanStatus === 'processing'}
+              disabled={!isCameraActive || isProcessing}
               style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 2rem', fontSize: '1.1rem' }}
             >
               <UserPlus size={20} />
-              Iniciar Escaneo
+              {isProcessing ? 'Procesando...' : 'Iniciar Escaneo Biométrico'}
             </button>
           </div>
 
@@ -302,23 +327,91 @@ export default function RegisterFace({ onNavigate, isPublic = false }) {
       </div>
 
       <style>{`
+        /* Simulación de la malla Face Mesh */
+        .face-mesh-grid {
+          position: absolute;
+          width: 100%;
+          height: 100%;
+          border-radius: 50%;
+          background-image: 
+            linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+          background-size: 20px 20px;
+          background-position: center center;
+          opacity: 0;
+          transition: opacity 0.5s ease;
+        }
+        
+        .face-mesh-grid.SCANNING, .face-mesh-grid.CAPTURE_SUCCESS {
+          opacity: 1;
+        }
+
+        .face-mesh-grid.SCANNING {
+          animation: meshPulse 1s infinite alternate;
+        }
+
+        .mesh-node {
+          position: absolute;
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          transform: translate(-50%, -50%);
+          box-shadow: 0 0 5px currentColor;
+        }
+        
+        /* Posiciones pseudo-aleatorias de los nodos en el rostro */
+        .mesh-node:nth-child(1) { top: 20%; left: 30%; }
+        .mesh-node:nth-child(2) { top: 20%; left: 70%; }
+        .mesh-node:nth-child(3) { top: 40%; left: 20%; }
+        .mesh-node:nth-child(4) { top: 40%; left: 80%; }
+        .mesh-node:nth-child(5) { top: 50%; left: 50%; }
+        .mesh-node:nth-child(6) { top: 60%; left: 35%; }
+        .mesh-node:nth-child(7) { top: 60%; left: 65%; }
+        .mesh-node:nth-child(8) { top: 75%; left: 50%; }
+        .mesh-node:nth-child(9) { top: 35%; left: 40%; }
+        .mesh-node:nth-child(10) { top: 35%; left: 60%; }
+        .mesh-node:nth-child(11) { top: 85%; left: 40%; }
+        .mesh-node:nth-child(12) { top: 85%; left: 60%; }
+
+        /* Animaciones */
+        @keyframes floating {
+          0%, 100% { transform: scale(1); opacity: 0.6; }
+          50% { transform: scale(1.02); opacity: 0.8; }
+        }
+
+        @keyframes pulsing {
+          from { opacity: 0.7; box-shadow: 0 0 10px rgba(0, 240, 255, 0.4); }
+          to { opacity: 1; box-shadow: 0 0 25px rgba(0, 240, 255, 0.8); }
+        }
+
+        @keyframes blink {
+          0%, 100% { opacity: 1; border-color: #FF0033; }
+          50% { opacity: 0.3; border-color: transparent; }
+        }
+
+        @keyframes meshPulse {
+          from { background-size: 20px 20px; }
+          to { background-size: 22px 22px; }
+        }
+
         .laser-scanner {
           position: absolute;
-          top: 15%;
+          top: 10%;
           left: 20%;
           width: 60%;
-          height: 2px;
-          background-color: var(--accent-primary);
-          box-shadow: 0 0 15px 5px rgba(56, 189, 248, 0.6);
-          animation: scanVertical 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+          height: 3px;
+          background-color: #00F0FF;
+          box-shadow: 0 0 20px 8px rgba(0, 240, 255, 0.7);
+          animation: scanVertical 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
           border-radius: 50%;
+          z-index: 20;
         }
 
         @keyframes scanVertical {
-          0% { top: 15%; opacity: 0; }
-          10% { opacity: 1; }
-          90% { opacity: 1; }
-          100% { top: 85%; opacity: 0; }
+          0% { top: 10%; opacity: 0; }
+          15% { opacity: 1; }
+          85% { opacity: 1; }
+          100% { top: 90%; opacity: 0; }
         }
       `}</style>
     </div>

@@ -46,6 +46,11 @@ router = APIRouter(
     dependencies=[Depends(get_current_user)]
 )
 
+public_router = APIRouter(
+    prefix="/api/detections", 
+    tags=["detections_public"]
+)
+
 @router.get("/", response_model=List[DetectionResponse])
 def get_detections(
     skip: int = 0, 
@@ -262,7 +267,7 @@ def analyze_frame(request: FrameAnalysisRequest, db: Session = Depends(get_db)):
         logger.error(f"Error en analyze_frame: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/register_face")
+@public_router.post("/register_face")
 def register_face(request: RegisterFaceRequest, db: Session = Depends(get_db)):
     try:
         # 1. Validar duplicidad de Nombre

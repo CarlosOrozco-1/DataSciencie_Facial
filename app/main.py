@@ -36,6 +36,7 @@ app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(cameras.router)
 app.include_router(detections.router)
+app.include_router(detections.public_router)
 app.include_router(processing.router)
 app.include_router(reports.router)
 
