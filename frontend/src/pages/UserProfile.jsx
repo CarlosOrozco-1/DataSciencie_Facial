@@ -424,54 +424,73 @@ export default function UserProfile() {
                             Registrar Rostro
                         </h3>
 
-                        <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', marginBottom: '1rem' }}>
+                        <div style={{ 
+                            width: '100%', 
+                            aspectRatio: '4/3', 
+                            backgroundColor: '#000', 
+                            borderRadius: '12px',
+                            overflow: 'hidden',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            position: 'relative',
+                            border: `2px solid ${faceStatus === 'idle' || faceStatus === 'capturing' ? '#E2E8F0' : faceStatus === 'countdown' || faceStatus === 'processing' ? '#00F0FF' : faceStatus === 'success' ? '#00FF66' : '#FF0033'}`,
+                            boxShadow: faceStatus === 'countdown' || faceStatus === 'processing' ? '0 0 20px rgba(0, 240, 255, 0.3)' : 'none',
+                            transition: 'all 0.3s ease',
+                            marginBottom: '1rem'
+                        }}>
                             <video 
                                 ref={videoRef} 
                                 autoPlay 
                                 playsInline 
                                 muted 
-                                style={{ width: '100%', display: 'block', transform: 'scaleX(-1)' }} 
+                                style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }}
                             />
                             <canvas ref={canvasRef} style={{ display: 'none' }} />
                             
-                            {/* Countdown overlay */}
-                            {faceStatus === 'countdown' && countdown > 0 && (
+                            {/* Overlay de estado (Malla Biométrica) */}
+                            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, pointerEvents: 'none', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                                 <div style={{
-                                    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    backgroundColor: 'rgba(0,0,0,0.3)'
+                                    position: 'absolute',
+                                    width: '60%',
+                                    height: '75%',
+                                    border: `2px ${faceStatus === 'idle' || faceStatus === 'capturing' ? 'dashed' : 'solid'} ${faceStatus === 'idle' || faceStatus === 'capturing' ? '#E2E8F0' : faceStatus === 'countdown' || faceStatus === 'processing' ? '#00F0FF' : faceStatus === 'success' ? '#00FF66' : '#FF0033'}`,
+                                    borderRadius: '50%',
+                                    boxShadow: `0 0 0 9999px rgba(0, 0, 0, ${faceStatus === 'error' ? 0.8 : 0.6})`,
+                                    animation: faceStatus === 'idle' || faceStatus === 'capturing' ? 'floating 4s infinite ease-in-out' : faceStatus === 'countdown' || faceStatus === 'processing' ? 'pulsing 0.5s infinite alternate' : faceStatus === 'error' ? 'blink 0.3s infinite alternate' : 'none',
+                                    transition: 'border-color 0.3s ease'
                                 }}>
-                                    <div style={{
-                                        fontSize: '4rem', fontWeight: 'bold', color: 'white',
-                                        textShadow: '0 2px 10px rgba(0,0,0,0.5)',
-                                        animation: 'pulse 1s ease-in-out infinite'
-                                    }}>
-                                        {countdown}
+                                    {/* Grid interno */}
+                                    <div className={`face-mesh-grid ${faceStatus}`} style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+                                        {[...Array(12)].map((_, i) => (
+                                           <div key={i} className={`mesh-node ${faceStatus}`} style={{ backgroundColor: faceStatus === 'idle' || faceStatus === 'capturing' ? '#E2E8F0' : faceStatus === 'countdown' || faceStatus === 'processing' ? '#00F0FF' : faceStatus === 'success' ? '#00FF66' : '#FF0033' }} />
+                                        ))}
                                     </div>
                                 </div>
-                            )}
 
-                            {/* Processing overlay */}
-                            {faceStatus === 'processing' && (
-                                <div style={{
-                                    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    backgroundColor: 'rgba(0,0,0,0.5)'
-                                }}>
-                                    <Loader2 size={48} style={{ animation: 'spin 1s linear infinite', color: 'var(--accent-primary)' }} />
-                                </div>
-                            )}
+                                {/* Láser al escanear/analizar */}
+                                {(faceStatus === 'countdown' || faceStatus === 'processing') && (
+                                    <div className="laser-scanner" />
+                                )}
 
-                            {/* Success overlay */}
-                            {faceStatus === 'success' && (
-                                <div style={{
-                                    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    backgroundColor: 'rgba(16,185,129,0.3)'
-                                }}>
-                                    <div style={{ fontSize: '4rem' }}>✅</div>
-                                </div>
-                            )}
+                                {/* Countdown número gigante */}
+                                {faceStatus === 'countdown' && countdown > 0 && (
+                                    <div style={{ fontSize: '4rem', fontWeight: 'bold', color: 'white', textShadow: '0 2px 10px rgba(0,0,0,0.5)', position: 'absolute', animation: 'pulse 1s ease-in-out infinite' }}>
+                                        {countdown}
+                                    </div>
+                                )}
+
+                                {/* Íconos de éxito/error/procesando en el centro */}
+                                {faceStatus === 'processing' && (
+                                    <Loader2 size={48} style={{ animation: 'spin 1s linear infinite', color: '#00F0FF', position: 'absolute' }} />
+                                )}
+                                {faceStatus === 'success' && (
+                                    <div style={{ fontSize: '4rem', position: 'absolute' }}>✅</div>
+                                )}
+                                {faceStatus === 'error' && (
+                                    <div style={{ fontSize: '4rem', position: 'absolute' }}>❌</div>
+                                )}
+                            </div>
                         </div>
 
                         {/* Indicador de fotos capturadas */}
@@ -514,6 +533,79 @@ export default function UserProfile() {
                 @keyframes pulse {
                     0%, 100% { opacity: 1; transform: scale(1); }
                     50% { opacity: 0.7; transform: scale(1.1); }
+                }
+                .face-mesh-grid {
+                    position: absolute;
+                    width: 100%;
+                    height: 100%;
+                    border-radius: 50%;
+                    background-image: 
+                        linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+                    background-size: 20px 20px;
+                    background-position: center center;
+                    opacity: 0;
+                    transition: opacity 0.5s ease;
+                }
+                .face-mesh-grid.countdown, .face-mesh-grid.processing, .face-mesh-grid.success {
+                    opacity: 1;
+                }
+                .face-mesh-grid.countdown, .face-mesh-grid.processing {
+                    animation: meshPulse 1s infinite alternate;
+                }
+                .mesh-node {
+                    position: absolute;
+                    width: 6px;
+                    height: 6px;
+                    border-radius: 50%;
+                    transform: translate(-50%, -50%);
+                    box-shadow: 0 0 5px currentColor;
+                }
+                .mesh-node:nth-child(1) { top: 20%; left: 30%; }
+                .mesh-node:nth-child(2) { top: 20%; left: 70%; }
+                .mesh-node:nth-child(3) { top: 40%; left: 20%; }
+                .mesh-node:nth-child(4) { top: 40%; left: 80%; }
+                .mesh-node:nth-child(5) { top: 50%; left: 50%; }
+                .mesh-node:nth-child(6) { top: 60%; left: 35%; }
+                .mesh-node:nth-child(7) { top: 60%; left: 65%; }
+                .mesh-node:nth-child(8) { top: 75%; left: 50%; }
+                .mesh-node:nth-child(9) { top: 35%; left: 40%; }
+                .mesh-node:nth-child(10) { top: 35%; left: 60%; }
+                .mesh-node:nth-child(11) { top: 85%; left: 40%; }
+                .mesh-node:nth-child(12) { top: 85%; left: 60%; }
+                @keyframes floating {
+                    0%, 100% { transform: scale(1); opacity: 0.6; }
+                    50% { transform: scale(1.02); opacity: 0.8; }
+                }
+                @keyframes pulsing {
+                    from { opacity: 0.7; box-shadow: 0 0 10px rgba(0, 240, 255, 0.4); }
+                    to { opacity: 1; box-shadow: 0 0 25px rgba(0, 240, 255, 0.8); }
+                }
+                @keyframes blink {
+                    0%, 100% { opacity: 1; border-color: #FF0033; }
+                    50% { opacity: 0.3; border-color: transparent; }
+                }
+                @keyframes meshPulse {
+                    from { background-size: 20px 20px; }
+                    to { background-size: 22px 22px; }
+                }
+                .laser-scanner {
+                    position: absolute;
+                    top: 10%;
+                    left: 20%;
+                    width: 60%;
+                    height: 3px;
+                    background-color: #00F0FF;
+                    box-shadow: 0 0 20px 8px rgba(0, 240, 255, 0.7);
+                    animation: scanVertical 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+                    border-radius: 50%;
+                    z-index: 20;
+                }
+                @keyframes scanVertical {
+                    0% { top: 10%; opacity: 0; }
+                    15% { opacity: 1; }
+                    85% { opacity: 1; }
+                    100% { top: 90%; opacity: 0; }
                 }
             `}</style>
         </div>

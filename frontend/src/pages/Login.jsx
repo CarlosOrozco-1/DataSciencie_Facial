@@ -52,12 +52,10 @@ export default function Login({ onLogin, onNavigate }) {
         const googleBtnContainer = document.getElementById('google-signin-btn')
         if (googleBtnContainer) {
           window.google.accounts.id.renderButton(googleBtnContainer, {
-            type: 'standard',
+            type: 'icon',
             theme: 'outline',
             size: 'large',
-            shape: 'pill',
-            text: 'signin_with',
-            width: 320,
+            shape: 'circle',
           })
         }
       }
@@ -197,12 +195,12 @@ export default function Login({ onLogin, onNavigate }) {
       }
 
       // 1. Mostrar IDLE y luego SCANNING
-      await delay(1000)
+      await delay(500)
       setFaceStatus('scanning')
       setFaceMessage('Escaneando rostro...')
       
       // 2. Simular escaneo láser 
-      await delay(1500)
+      await delay(750)
       
       // 3. Capturar
       captureAndLogin()
@@ -260,10 +258,10 @@ export default function Login({ onLogin, onNavigate }) {
   const retryFaceCapture = async () => {
     setFaceStatus('idle')
     setFaceMessage('Posiciona tu rostro frente a la cámara...')
-    await delay(1000)
+    await delay(500)
     setFaceStatus('scanning')
     setFaceMessage('Escaneando rostro...')
-    await delay(1500)
+    await delay(750)
     captureAndLogin()
   }
 
@@ -361,28 +359,57 @@ export default function Login({ onLogin, onNavigate }) {
               <span>o accede con</span>
             </div>
 
-            {/* Botones de acceso rápido — ovalados y transparentes */}
-            <div className="login-oval-methods" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', alignItems: 'center' }}>
-              {/* Google Overlay */}
-              <div className="login-btn-oval-wrapper" style={{ position: 'relative', width: '320px', height: '42px', maxWidth: '100%' }}>
-                {/* Botón Visual */}
-                <div className="login-btn-oval" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
-                  <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="G" width="18" height="18" />
-                  <span>Acceder con Google</span>
-                </div>
-                {/* Iframe Real (invisible pero clickeable) */}
-                <div id="google-signin-btn" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0.01, zIndex: 10 }} title="Iniciar con Google"></div>
-              </div>
+            {/* Botones de acceso rápido — circulares */}
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '0.5rem' }}>
+              {/* Contenedor Iframe Google (invisible si usamos el wrapper custom, pero GIS renderiza un circulo por defecto con type: 'icon') */}
+              <div id="google-signin-btn" title="Iniciar con Google"></div>
 
-              {/* Reconocimiento Facial */}
-              <button type="button" className="login-btn-oval face-oval" onClick={startFaceLogin} disabled={loading} title="Iniciar con Rostro">
+              {/* Reconocimiento Facial Circular */}
+              <button 
+                type="button" 
+                onClick={startFaceLogin} 
+                disabled={loading} 
+                title="Iniciar con Reconocimiento Facial" 
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  border: '1px solid var(--border-subtle)',
+                  backgroundColor: 'var(--bg-card)',
+                  color: 'var(--text-primary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
+                }}
+              >
                 <Camera size={20} />
-                <span>Reconocimiento Facial</span>
               </button>
-              
-              {/* Registro Voluntario */}
-              <button type="button" className="login-btn-oval" onClick={() => onNavigate('register')} disabled={loading} title="Registrar Rostro Público" style={{ border: '1px solid rgba(255,255,255,0.2)', backgroundColor: 'transparent', color: 'var(--text-secondary)' }}>
-                <span style={{ marginLeft: '1.7rem' }}>Registro Voluntario Nuevo</span>
+            </div>
+
+            {/* Separador Registro */}
+            <div className="login-divider" style={{ margin: '1.5rem 0 1rem' }}>
+              <span>¿No tienes cuenta?</span>
+            </div>
+            
+            {/* Registro Voluntario Link */}
+            <div style={{ textAlign: 'center' }}>
+              <button 
+                type="button" 
+                onClick={() => onNavigate('register')} 
+                disabled={loading} 
+                style={{ 
+                  background: 'none', 
+                  border: 'none', 
+                  color: 'var(--accent-primary)', 
+                  cursor: 'pointer', 
+                  fontSize: '0.9rem', 
+                  fontWeight: '600'
+                }}
+              >
+                Registro Voluntario Nuevo
               </button>
             </div>
           </>
