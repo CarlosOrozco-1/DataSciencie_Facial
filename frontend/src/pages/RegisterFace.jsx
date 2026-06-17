@@ -5,10 +5,10 @@ import { authFetch, API_URL } from '../utils/api';
 export default function RegisterFace({ onNavigate, isPublic = false }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
-  
+
   const [name, setName] = useState('');
   const [isCameraActive, setIsCameraActive] = useState(false);
-  
+
   // Estados requeridos por el protocolo
   const [meshState, setMeshState] = useState('IDLE'); // IDLE | SCANNING | CAPTURE_SUCCESS | ERROR
   const [scanMessage, setScanMessage] = useState('Centra tu rostro en el círculo');
@@ -85,7 +85,7 @@ export default function RegisterFace({ onNavigate, isPublic = false }) {
         // Paso 2: Cambia a SCANNING
         setMeshState('SCANNING');
         setScanMessage(`Escaneando rostro... (${i}/4)`);
-        
+
         // Simular escaneo de profundidad (láser visible)
         await delay(1500);
 
@@ -122,14 +122,14 @@ export default function RegisterFace({ onNavigate, isPublic = false }) {
       // Finalización Exitosa
       setMeshState('CAPTURE_SUCCESS');
       setScanMessage('Perfil biométrico creado correctamente.');
-      
+
       const ageText = data.age && data.age !== "(Desconocida)" ? ` | Edad detectada: ${data.age}` : '';
       setMessage({ type: 'success', text: `¡Registro exitoso! Identidad guardada como: ${data.name}${ageText}` });
       setName('');
-      
+
       await delay(2000);
       stopCamera();
-      
+
     } catch (error) {
       setMeshState('ERROR');
       setScanMessage('Error en la validación.');
@@ -192,12 +192,12 @@ export default function RegisterFace({ onNavigate, isPublic = false }) {
 
       <div className="card" style={{ padding: '2rem' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          
+
           <div className="form-group">
             <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Nombre Completo</label>
-            <input 
-              type="text" 
-              placeholder="Ej. Juan Pérez" 
+            <input
+              type="text"
+              placeholder="Ej. Juan Pérez"
               value={name}
               onChange={(e) => setName(e.target.value)}
               disabled={isProcessing}
@@ -214,10 +214,10 @@ export default function RegisterFace({ onNavigate, isPublic = false }) {
           </div>
 
           {/* Contenedor del video con SIMULACIÓN DE MEDIA PIPE FACE MESH */}
-          <div style={{ 
-            width: '100%', 
-            aspectRatio: '4/3', 
-            backgroundColor: '#000', 
+          <div style={{
+            width: '100%',
+            aspectRatio: '4/3',
+            backgroundColor: '#000',
             borderRadius: '12px',
             overflow: 'hidden',
             display: 'flex',
@@ -236,26 +236,26 @@ export default function RegisterFace({ onNavigate, isPublic = false }) {
                 </button>
               </div>
             )}
-            
-            <video 
-              ref={videoRef} 
-              autoPlay 
-              playsInline 
-              muted 
-              style={{ 
-                width: '100%', 
-                height: '100%', 
+
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              style={{
+                width: '100%',
+                height: '100%',
                 objectFit: 'cover',
                 display: isCameraActive ? 'block' : 'none',
                 transform: 'scaleX(-1)' // Modo espejo
-              }} 
+              }}
             />
             <canvas ref={canvasRef} style={{ display: 'none' }} />
 
             {/* OVERLAY DE ESTADOS (Malla simulada) */}
             {isCameraActive && (
               <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, pointerEvents: 'none', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                
+
                 {/* Overlay principal que oscurece los bordes */}
                 <div style={{
                   position: 'absolute',
@@ -271,7 +271,7 @@ export default function RegisterFace({ onNavigate, isPublic = false }) {
                   <div className={`face-mesh-grid ${meshState}`} style={{ borderColor: `rgba(${meshConfig.rgb}, 0.3)` }}>
                     {/* Nodos flotantes simulados */}
                     {[...Array(12)].map((_, i) => (
-                       <div key={i} className={`mesh-node ${meshState}`} style={{ backgroundColor: meshConfig.main }} />
+                      <div key={i} className={`mesh-node ${meshState}`} style={{ backgroundColor: meshConfig.main }} />
                     ))}
                   </div>
                 </div>
@@ -305,17 +305,17 @@ export default function RegisterFace({ onNavigate, isPublic = false }) {
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '0.5rem' }}>
             {isCameraActive && !isProcessing && (
-              <button 
-                className="btn" 
+              <button
+                className="btn"
                 onClick={stopCamera}
                 style={{ backgroundColor: 'var(--border-subtle)', color: 'white' }}
               >
                 Apagar Cámara
               </button>
             )}
-            
-            <button 
-              className="btn btn-primary" 
+
+            <button
+              className="btn btn-primary"
               onClick={handleRegister}
               disabled={!isCameraActive || isProcessing}
               style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 2rem', fontSize: '1.1rem' }}

@@ -18,8 +18,8 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-# Tolerancia configurable por entorno
-FACE_MATCH_TOLERANCE = float(os.environ.get("FACE_MATCH_TOLERANCE", "0.6"))
+# Tolerancia configurable por entorno. Aumentada a 0.64 para mejor detección
+FACE_MATCH_TOLERANCE = float(os.environ.get("FACE_MATCH_TOLERANCE", "0.64"))
 
 
 class FaceAuthenticator:
