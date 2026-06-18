@@ -102,18 +102,27 @@ class FaceAttributesEstimator:
             return "unknown", 0.0
             
         try:
-            # Preprocesamiento: Mejorar contraste para ayudar al modelo Caffe
-            img_yuv = cv2.cvtColor(face_roi, cv2.COLOR_BGR2YUV)
-            img_yuv[:,:,0] = cv2.equalizeHist(img_yuv[:,:,0])
-            enhanced_roi = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)
-            
-            blob = cv2.dnn.blobFromImage(enhanced_roi, 1.0, (227, 227), self.MODEL_MEAN_VALUES, swapRB=False)
+            # Eliminar la ecualización de histograma porque suele añadir artefactos y arrugas falsas
+            # que confunden al modelo Caffe entrenado en el dataset Adience.
+            blob = cv2.dnn.blobFromImage(face_roi, 1.0, (227, 227), self.MODEL_MEAN_VALUES, swapRB=False)
             self.age_net.setInput(blob)
-            preds = self.age_net.forward()
+            preds = self.age_net.forward()[0]
             
-            age_idx = preds[0].argmax()
-            age = self.age_list[age_idx]
-            confidence = float(preds[0].max())
+            # Obtener los dos índices con mayor probabilidad
+            top2_idx = preds.argsort()[-2:][::-1]
+            best_idx = top2_idx[0]
+            
+            # Heurística para estabilizar y corregir el desfase:
+            # El modelo a menudo confunde adultos de 30-40 con adolescentes (15-20) o adultos mayores (48-53 o 60-100).
+            # Si la predicción principal es atípica (índices 3, 6, 7), pero la segunda opción (con probabilidad razonable)
+            # es un rango central adulto (índices 4: 25-32, o 5: 38-43), damos preferencia al rango adulto.
+            if best_idx in [3, 6, 7]: 
+                second_best = top2_idx[1]
+                if second_best in [4, 5] and preds[second_best] > 0.15: 
+                    best_idx = second_best
+            
+            age = self.age_list[best_idx]
+            confidence = float(preds[best_idx])
             
             return age, confidence
         except Exception as e:

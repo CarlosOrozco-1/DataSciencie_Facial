@@ -43,8 +43,11 @@ export default function DetectionsManager() {
       })
       
       if (selectedDate) {
-        queryParams.append('start_date', `${selectedDate}T00:00:00`)
-        queryParams.append('end_date', `${selectedDate}T23:59:59`)
+        // Convertir la fecha local seleccionada a sus rangos UTC para consultar correctamente en la base de datos
+        const start = new Date(`${selectedDate}T00:00:00`);
+        const end = new Date(`${selectedDate}T23:59:59`);
+        queryParams.append('start_date', start.toISOString());
+        queryParams.append('end_date', end.toISOString());
       }
       if (genderFilter) {
         queryParams.append('gender', genderFilter)
@@ -170,8 +173,8 @@ export default function DetectionsManager() {
         message: reportConfig.message,
         camera_id: cameraFilter ? parseInt(cameraFilter) : null,
         gender: genderFilter || null,
-        start_date: selectedDate ? `${selectedDate}T00:00:00` : null,
-        end_date: selectedDate ? `${selectedDate}T23:59:59` : null
+        start_date: selectedDate ? new Date(`${selectedDate}T00:00:00`).toISOString() : null,
+        end_date: selectedDate ? new Date(`${selectedDate}T23:59:59`).toISOString() : null
       }
 
       const res = await authFetch(`${API_URL}/api/reports/send`, {

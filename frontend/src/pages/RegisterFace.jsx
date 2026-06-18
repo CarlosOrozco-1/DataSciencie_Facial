@@ -216,7 +216,8 @@ export default function RegisterFace({ onNavigate, isPublic = false }) {
           {/* Contenedor del video con SIMULACIÓN DE MEDIA PIPE FACE MESH */}
           <div style={{
             width: '100%',
-            aspectRatio: '4/3',
+            aspectRatio: '16/9',
+            maxHeight: '45vh',
             backgroundColor: '#000',
             borderRadius: '12px',
             overflow: 'hidden',

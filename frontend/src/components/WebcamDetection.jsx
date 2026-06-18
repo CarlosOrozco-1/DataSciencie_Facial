@@ -300,6 +300,11 @@ export function WebcamDetection({ onDetection, isDetecting, cameraId = 1, device
               labelText = 'MUJER';
             }
             
+            // Añadir rango de edad si está disponible
+            if (!isSpoof && det.age && det.age !== 'unknown') {
+              labelText += ` ${det.age}`;
+            }
+            
             // Si es registrado, mostramos solo el nombre (o nombre + edad si quisiéramos).
             // Si no, mostramos el género y el nivel de confianza.
             const text = isSpoof ? labelText : (isRegistered ? labelText : `${labelText} ${Math.round(det.confidence * 100)}%`);
