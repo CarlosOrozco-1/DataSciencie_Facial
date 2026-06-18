@@ -133,12 +133,13 @@ export default function DetectionsManager() {
   }
 
   const handleExportCSV = () => {
-    const headers = ['ID', 'Fecha/Hora', 'Camara', 'Genero', 'Confianza']
+    const headers = ['ID', 'Fecha/Hora', 'Camara', 'Genero', 'Edad', 'Confianza']
     const rows = detections.map(det => [
       det.id,
       new Date(det.timestamp).toLocaleString(),
       getCameraName(det.camera_id),
       det.gender === 'male' ? 'Hombre' : det.gender === 'female' ? 'Mujer' : det.gender === 'spoof' ? 'Suplantacion' : det.gender,
+      det.age || 'Desconocida',
       `${Math.round(det.confidence * 100)}%`
     ])
     
@@ -350,6 +351,7 @@ export default function DetectionsManager() {
               <th style={{ textAlign: 'left', padding: '1rem', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.85rem' }}>Fecha/Hora</th>
               <th style={{ textAlign: 'left', padding: '1rem', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.85rem' }}>Cámara</th>
               <th style={{ textAlign: 'left', padding: '1rem', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.85rem' }}>Género</th>
+              <th style={{ textAlign: 'left', padding: '1rem', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.85rem' }}>Edad</th>
               <th style={{ textAlign: 'left', padding: '1rem', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.85rem' }}>Confianza</th>
               <th style={{ textAlign: 'right', padding: '1rem', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.85rem' }}>Acciones</th>
             </tr>
@@ -393,6 +395,9 @@ export default function DetectionsManager() {
                       {det.gender === 'male' ? 'Hombre' : 'Mujer'}
                     </span>
                   )}
+                </td>
+                <td style={{ padding: '1rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                  {det.age || '-'}
                 </td>
                 <td style={{ padding: '1rem', fontSize: '0.9rem' }}>
                   {editingId === det.id ? (

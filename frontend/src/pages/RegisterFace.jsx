@@ -260,8 +260,8 @@ export default function RegisterFace({ onNavigate, isPublic = false }) {
                 {/* Overlay principal que oscurece los bordes */}
                 <div style={{
                   position: 'absolute',
-                  width: '60%',
                   height: '75%',
+                  aspectRatio: '1 / 1',
                   border: `2px ${meshState === 'IDLE' ? 'dashed' : 'solid'} ${meshConfig.main}`,
                   borderRadius: '50%',
                   boxShadow: `0 0 0 9999px rgba(0, 0, 0, ${meshState === 'ERROR' ? 0.8 : 0.6})`,

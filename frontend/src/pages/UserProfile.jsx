@@ -452,8 +452,8 @@ export default function UserProfile() {
                             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, pointerEvents: 'none', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                                 <div style={{
                                     position: 'absolute',
-                                    width: '60%',
                                     height: '75%',
+                                    aspectRatio: '1 / 1',
                                     border: `2px ${faceStatus === 'idle' || faceStatus === 'capturing' ? 'dashed' : 'solid'} ${faceStatus === 'idle' || faceStatus === 'capturing' ? '#E2E8F0' : faceStatus === 'countdown' || faceStatus === 'processing' ? '#00F0FF' : faceStatus === 'success' ? '#00FF66' : '#FF0033'}`,
                                     borderRadius: '50%',
                                     boxShadow: `0 0 0 9999px rgba(0, 0, 0, ${faceStatus === 'error' ? 0.8 : 0.6})`,
